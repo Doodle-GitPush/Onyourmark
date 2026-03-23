@@ -243,7 +243,31 @@ export default function Home() {
       // ── AI Mockup slide (if user generated one) ──
       if (aiMockupImage) {
         pdf.addPage([W, H], 'landscape')
-        pdf.addImage(aiMockupImage, 'JPEG', 0, 0, W, H)
+        // Load image to get original dimensions and apply 'object-contain' fit
+        await new Promise<void>((resolve, reject) => {
+          const img = new Image()
+          img.onload = () => {
+            const imgR = img.naturalWidth / img.naturalHeight
+            const canvasR = W / H
+            let renderW = W
+            let renderH = H
+            let x = 0
+            let y = 0
+
+            if (imgR > canvasR) {
+              renderH = W / imgR
+              y = (H - renderH) / 2
+            } else {
+              renderW = H * imgR
+              x = (W - renderW) / 2
+            }
+            
+            pdf.addImage(img, 'JPEG', x, y, renderW, renderH)
+            resolve()
+          }
+          img.onerror = reject
+          img.src = aiMockupImage
+        })
       }
 
       pdf.save('onyourmark-presentation.pdf')
