@@ -9,8 +9,10 @@ import { Slider } from "@/components/ui/slider"
 import { Button } from "@/components/ui/button"
 import { AIInsightSlide, LogoInsight } from "@/components/AIInsightSlide"
 import { AIMockupGenerator } from "@/components/AIMockupGenerator"
+import { Logo3DViewer, LogoMaterial } from "@/components/Logo3DViewer"
 import { jsPDF } from "jspdf"
 import { toJpeg } from "html-to-image"
+import { RotateCw } from "lucide-react"
 
 export default function Home() {
   const [svgContent, setSvgContent] = useState<string>("")
@@ -18,10 +20,12 @@ export default function Home() {
   const [secondaryColor, setSecondaryColor] = useState<string>("#FF4800")
   const [logoSize, setLogoSize] = useState<number>(30)
   const [mockupSize, setMockupSize] = useState<number>(30)
-  const [activeTab, setActiveTab] = useState<"logo" | "mockups">("logo")
+  const [activeTab, setActiveTab] = useState<"logo" | "mockups" | "3d">("logo")
   const [isExporting, setIsExporting] = useState(false)
   const [aiMockupImage, setAiMockupImage] = useState<string | null>(null)
   const [logoInsight, setLogoInsight] = useState<LogoInsight | null>(null)
+  const [logoMaterial, setLogoMaterial] = useState<LogoMaterial>("chrome")
+  const [autoRotate, setAutoRotate] = useState(true)
 
   const mainRef = useRef<HTMLDivElement>(null)
   const aiInsightRef = useRef<HTMLDivElement>(null)
@@ -315,21 +319,48 @@ export default function Home() {
                 onSecondaryChange={setSecondaryColor}
               />
 
-              <div className="space-y-3 pt-6 pb-2">
-                <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">
-                  {activeTab === 'logo' ? 'Logo Size' : 'Mockup Logo Size'}
-                </label>
-                <div className="px-1 pt-1">
-                  <Slider
-                    value={[activeTab === 'logo' ? logoSize : mockupSize]}
-                    onValueChange={(v) => activeTab === 'logo' ? setLogoSize(v[0]) : setMockupSize(v[0])}
-                    max={100}
-                    min={10}
-                    step={1}
-                    className="[&>span:first-child]:bg-slate-200 [&>span:first-child]:h-1.5 [&_[role=slider]]:bg-[#FF4800] [&_[role=slider]]:border-[#FF4800] [&>span>span]:bg-[#FF4800] [&_[role=slider]]:w-4 [&_[role=slider]]:h-4"
-                  />
+              {activeTab === '3d' ? (
+                <div className="space-y-3 pt-6 pb-2">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">
+                    Material
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['chrome', 'glass', 'gold', 'matte', 'holo'] as const).map((m) => (
+                      <button
+                        key={m}
+                        onClick={() => setLogoMaterial(m)}
+                        className={`py-2 rounded-lg text-[10px] font-bold tracking-wide capitalize transition-all border ${logoMaterial === m ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
+                      >
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => setAutoRotate((v) => !v)}
+                    className={`mt-2 w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-[11px] font-bold tracking-wide transition-all border ${autoRotate ? 'bg-orange-50 text-[#FF4800] border-orange-200' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
+                  >
+                    <RotateCw className="w-3.5 h-3.5" />
+                    Auto-Rotate {autoRotate ? 'On' : 'Off'}
+                  </button>
+                  <p className="text-[10px] text-slate-400 leading-[1.5] pt-1">Drag to orbit, scroll to zoom.</p>
                 </div>
-              </div>
+              ) : (
+                <div className="space-y-3 pt-6 pb-2">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">
+                    {activeTab === 'logo' ? 'Logo Size' : 'Mockup Logo Size'}
+                  </label>
+                  <div className="px-1 pt-1">
+                    <Slider
+                      value={[activeTab === 'logo' ? logoSize : mockupSize]}
+                      onValueChange={(v) => activeTab === 'logo' ? setLogoSize(v[0]) : setMockupSize(v[0])}
+                      max={100}
+                      min={10}
+                      step={1}
+                      className="[&>span:first-child]:bg-slate-200 [&>span:first-child]:h-1.5 [&_[role=slider]]:bg-[#FF4800] [&_[role=slider]]:border-[#FF4800] [&>span>span]:bg-[#FF4800] [&_[role=slider]]:w-4 [&_[role=slider]]:h-4"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -341,6 +372,12 @@ export default function Home() {
                 className={`flex-1 py-[10px] text-[11px] tracking-wide font-bold rounded-[8px] transition-all flex items-center justify-center ${activeTab === 'logo' ? 'bg-white text-[#FF4800] shadow-[0_2px_4px_rgba(0,0,0,0.04)] border border-black/5' : 'text-slate-400 hover:text-slate-600'}`}
               >
                 LOGO
+              </button>
+              <button
+                onClick={() => setActiveTab('3d')}
+                className={`flex-1 py-[10px] text-[11px] tracking-wide font-bold rounded-[8px] transition-all flex items-center justify-center ${activeTab === '3d' ? 'bg-white text-[#FF4800] shadow-[0_2px_4px_rgba(0,0,0,0.04)] border border-black/5' : 'text-slate-400 hover:text-slate-600'}`}
+              >
+                3D
               </button>
               <button
                 onClick={() => setActiveTab('mockups')}
@@ -366,6 +403,21 @@ export default function Home() {
                     onInsightReady={setLogoInsight}
                   />
                 </div>
+              </div>
+            ) : activeTab === '3d' ? (
+              <div className="w-full bg-transparent">
+                {svgContent ? (
+                  <Logo3DViewer
+                    svgContent={svgContent}
+                    color={primaryColor}
+                    material={logoMaterial}
+                    autoRotate={autoRotate}
+                  />
+                ) : (
+                  <div className="w-full h-[560px] flex items-center justify-center text-[13px] text-slate-400 font-medium">
+                    Upload a logo to view it in 3D
+                  </div>
+                )}
               </div>
             ) : (
               <div className="flex flex-col gap-3 w-full h-auto bg-transparent">
