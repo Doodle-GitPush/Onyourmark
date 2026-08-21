@@ -2,7 +2,7 @@
 
 import React, { useMemo, useRef, Suspense } from "react"
 import { Canvas, useFrame, useThree } from "@react-three/fiber"
-import { OrbitControls, Environment, Lightformer, MeshReflectorMaterial, Center } from "@react-three/drei"
+import { OrbitControls, Environment, Lightformer, MeshReflectorMaterial, MeshTransmissionMaterial, Center } from "@react-three/drei"
 import { EffectComposer, Bloom, Vignette, N8AO } from "@react-three/postprocessing"
 import { SVGLoader } from "three/examples/jsm/loaders/SVGLoader.js"
 import * as THREE from "three"
@@ -29,25 +29,49 @@ const MATERIAL_PRESETS: Record<LogoMaterial, (color: string) => React.ReactEleme
         />
     ),
     glass: (color) => (
-        <meshPhysicalMaterial
-            color={color}
-            metalness={0}
-            roughness={0.02}
-            transmission={0.95}
-            thickness={1.2}
+        // meshPhysicalMaterial's built-in `transmission` relies on the
+        // renderer's implicit background-capture pass, which the
+        // EffectComposer/N8AO pipeline below breaks — it renders as a flat,
+        // still-opaque, still-colored block instead of transparent. drei's
+        // MeshTransmissionMaterial does its own manual background capture
+        // via an FBO each frame, independent of post-processing, so it
+        // stays transparent regardless of what runs after it.
+        // Color is applied via attenuation (how a real tinted glass picks up
+        // hue over distance) rather than a flat multiply, so it reads as
+        // tinted glass instead of solid colored plastic.
+        <MeshTransmissionMaterial
+            color="#ffffff"
+            attenuationColor={color}
+            attenuationDistance={2.5}
+            transmission={1}
+            thickness={1.5}
+            roughness={0.04}
             ior={1.5}
-            envMapIntensity={1.6}
+            chromaticAberration={0.04}
             clearcoat={1}
+            clearcoatRoughness={0.1}
+            envMapIntensity={1.4}
+            samples={6}
+            resolution={512}
+            backside
         />
     ),
-    gold: (color) => (
+    gold: () => (
+        // Ignores the brand color on purpose — "Gold" implies its own hue,
+        // same as real gold plating wouldn't turn blue because your logo is.
+        // Yellow has roughly double blue's perceived luminance for the same
+        // RGB "brightness" (Rec.709 luma weights green/red far above blue),
+        // so a normal-looking gold hex blows out under Bloom across the
+        // whole surface instead of just specular highlights. Using a deeper
+        // antique-gold tone keeps its luma in the same range as the other
+        // (bluer) presets that already look right under this lighting.
         <meshPhysicalMaterial
-            color={color}
+            color="#7A5F22"
             metalness={1}
-            roughness={0.24}
-            clearcoat={0.7}
-            clearcoatRoughness={0.25}
-            envMapIntensity={1.6}
+            roughness={0.3}
+            clearcoat={0.6}
+            clearcoatRoughness={0.3}
+            envMapIntensity={1.2}
         />
     ),
     matte: (color) => (
