@@ -43,14 +43,14 @@ const MATERIAL_PRESETS: Record<LogoMaterial, (color: string) => React.ReactEleme
             color="#ffffff"
             attenuationColor={color}
             attenuationDistance={2.5}
-            transmission={1}
+            transmission={0.94}
             thickness={1.5}
-            roughness={0.04}
+            roughness={0.1}
             ior={1.5}
             chromaticAberration={0.04}
             clearcoat={1}
             clearcoatRoughness={0.1}
-            envMapIntensity={1.4}
+            envMapIntensity={2.4}
             samples={6}
             resolution={512}
             backside
@@ -182,6 +182,28 @@ function Rig({ autoRotate }: { autoRotate: boolean }) {
     )
 }
 
+/** A real, camera-visible lit panel behind the object. `Environment`'s
+ *  lightformers below are baked into a cubemap for reflections only — they
+ *  aren't geometry the camera can actually see, so `MeshTransmissionMaterial`
+ *  (which renders what's really behind the object each frame, not the
+ *  reflection cubemap) sees nothing but the fog-faded void through it. This
+ *  panel gives glass something bright to show — the same reason product
+ *  photographers light glass from a card behind the subject rather than
+ *  shooting it against a bare black backdrop.
+ *
+ *  Only rendered for the glass preset: every other material is opaque, so
+ *  it doesn't need anything to show "through" it — it would just show up
+ *  as an unwanted visible rectangle behind them, breaking the void the
+ *  rest of the UI is built around. */
+function Backdrop() {
+    return (
+        <mesh position={[0, 4, -22]}>
+            <planeGeometry args={[50, 40]} />
+            <meshStandardMaterial color="#4a4a52" roughness={0.9} />
+        </mesh>
+    )
+}
+
 /** Glossy studio floor — grounds the object with a soft reflection instead
  *  of a flat contact shadow, without needing a real environment capture. */
 function Floor() {
@@ -236,6 +258,7 @@ export function Logo3DViewer({ svgContent, color, material, autoRotate }: Logo3D
                     <Center>
                         <ExtrudedLogo svgContent={svgContent} color={color} material={material} />
                     </Center>
+                    {material === 'glass' && <Backdrop />}
                     <Floor />
                 </Suspense>
 
