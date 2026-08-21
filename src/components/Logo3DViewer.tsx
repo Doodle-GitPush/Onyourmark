@@ -2,21 +2,31 @@
 
 import React, { useMemo, useRef, Suspense } from "react"
 import { Canvas, useFrame, useThree } from "@react-three/fiber"
-import { OrbitControls, Environment, Lightformer, MeshReflectorMaterial, MeshTransmissionMaterial, Center } from "@react-three/drei"
+import { OrbitControls, PerspectiveCamera, Environment, Lightformer, MeshReflectorMaterial, MeshTransmissionMaterial, Center } from "@react-three/drei"
 import { EffectComposer, Bloom, Vignette, N8AO } from "@react-three/postprocessing"
 import { SVGLoader } from "three/examples/jsm/loaders/SVGLoader.js"
 import * as THREE from "three"
 
 export type LogoMaterial = "chrome" | "glass" | "gold" | "matte" | "holo"
 
+/** Everything about the scene itself — as opposed to `color`/`material`,
+ *  which describe the logo. Mirrors the shape of the DialKit config in
+ *  page.tsx so its returned values can be passed straight through. */
+export interface SceneEnv {
+    autoRotate: boolean
+    rotateSpeed: number
+    camera: { fov: number }
+    lighting: { key: number; fill: number; rim: number; rimColor: string; ambient: number }
+    floor: { visible: boolean; color: string; reflectivity: number; roughness: number }
+    object: { depth: number; bevel: number }
+    postfx: { bloom: number; ao: number; vignette: number }
+}
+
 interface Logo3DViewerProps {
     svgContent: string
     color: string
     material: LogoMaterial
-    autoRotate: boolean
-    extrudeDepth?: number
-    lightIntensity?: number
-    showFloor?: boolean
+    env: SceneEnv
 }
 
 const MATERIAL_PRESETS: Record<LogoMaterial, (color: string) => React.ReactElement> = {
@@ -97,7 +107,19 @@ const MATERIAL_PRESETS: Record<LogoMaterial, (color: string) => React.ReactEleme
     ),
 }
 
-function ExtrudedLogo({ svgContent, color, material, extrudeDepth = 6 }: Omit<Logo3DViewerProps, "autoRotate">) {
+function ExtrudedLogo({
+    svgContent,
+    color,
+    material,
+    depth,
+    bevel,
+}: {
+    svgContent: string
+    color: string
+    material: LogoMaterial
+    depth: number
+    bevel: number
+}) {
     const groupRef = useRef<THREE.Group>(null)
 
     const geometries = useMemo(() => {
@@ -115,10 +137,10 @@ function ExtrudedLogo({ svgContent, color, material, extrudeDepth = 6 }: Omit<Lo
 
             const geoms = shapes.map(({ shape }) => {
                 const geom = new THREE.ExtrudeGeometry(shape, {
-                    depth: extrudeDepth,
-                    bevelEnabled: true,
-                    bevelThickness: 1.2,
-                    bevelSize: 0.8,
+                    depth,
+                    bevelEnabled: bevel > 0,
+                    bevelThickness: bevel * 1.5,
+                    bevelSize: bevel,
                     bevelSegments: 5,
                     curveSegments: 32,
                 })
@@ -131,7 +153,7 @@ function ExtrudedLogo({ svgContent, color, material, extrudeDepth = 6 }: Omit<Lo
             console.warn("Failed to parse SVG for 3D extrusion", e)
             return []
         }
-    }, [svgContent, extrudeDepth])
+    }, [svgContent, depth, bevel])
 
     // Normalize scale/orientation: SVG y-axis is flipped vs three.js
     const { scale, offset } = useMemo(() => {
@@ -165,8 +187,9 @@ function ExtrudedLogo({ svgContent, color, material, extrudeDepth = 6 }: Omit<Lo
     )
 }
 
-function Rig({ autoRotate }: { autoRotate: boolean }) {
+function Rig({ autoRotate, rotateSpeed }: { autoRotate: boolean; rotateSpeed: number }) {
     const { camera } = useThree()
+
     useFrame(() => {
         camera.lookAt(0, 0, 0)
     })
@@ -174,7 +197,7 @@ function Rig({ autoRotate }: { autoRotate: boolean }) {
         <OrbitControls
             makeDefault
             autoRotate={autoRotate}
-            autoRotateSpeed={2.2}
+            autoRotateSpeed={rotateSpeed}
             enablePan={false}
             minDistance={20}
             maxDistance={90}
@@ -208,7 +231,7 @@ function Backdrop() {
 
 /** Glossy studio floor — grounds the object with a soft reflection instead
  *  of a flat contact shadow, without needing a real environment capture. */
-function Floor() {
+function Floor({ color, reflectivity, roughness }: { color: string; reflectivity: number; roughness: number }) {
     return (
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -13, 0]} receiveShadow>
             <planeGeometry args={[200, 200]} />
@@ -216,11 +239,11 @@ function Floor() {
                 blur={[400, 100]}
                 resolution={512}
                 mixBlur={1}
-                mixStrength={12}
-                roughness={1}
+                mixStrength={reflectivity}
+                roughness={roughness}
                 depthScale={1}
                 minDepthThreshold={0.85}
-                color="#050505"
+                color={color}
                 metalness={0.2}
                 mirror={0}
             />
@@ -228,48 +251,51 @@ function Floor() {
     )
 }
 
-export function Logo3DViewer({
-    svgContent,
-    color,
-    material,
-    autoRotate,
-    extrudeDepth = 6,
-    lightIntensity = 1,
-    showFloor = true,
-}: Logo3DViewerProps) {
+export function Logo3DViewer({ svgContent, color, material, env }: Logo3DViewerProps) {
     if (!svgContent) return null
+
+    // Lightformer softboxes drive metal/chrome reflections — scaled against
+    // the key light so "Lighting → Key" reads as one overall brightness
+    // knob instead of the direct lights and reflections drifting apart.
+    const reflectionScale = env.lighting.key / 1.6
 
     return (
         <div className="w-full h-full relative">
             <Canvas
                 shadows
                 dpr={[1, 2]}
-                camera={{ position: [0, 0, 55], fov: 35 }}
                 gl={{ antialias: true, preserveDrawingBuffer: true }}
             >
+                {/* A declarative camera instead of Canvas's `camera` prop (which
+                    only sets initial values) — drei's PerspectiveCamera keeps fov
+                    reactive to the DialKit slider, including calling
+                    updateProjectionMatrix() on change, without us imperatively
+                    mutating the camera object returned from useThree(). */}
+                <PerspectiveCamera makeDefault position={[0, 0, 55]} fov={env.camera.fov} />
+
                 {/* Fades the floor into the page's own void instead of showing a
                     hard horizon line — keeps the studio floor from reading as a
                     visible "backdrop" against the ultra-minimal page background. */}
                 <fog attach="fog" args={['#0A0A0A', 60, 100]} />
-                <ambientLight intensity={0.5 * lightIntensity} />
+                <ambientLight intensity={env.lighting.ambient} />
                 {/* Key light */}
                 <directionalLight
                     position={[30, 40, 30]}
-                    intensity={1.6 * lightIntensity}
+                    intensity={env.lighting.key}
                     castShadow
                     shadow-mapSize={[1024, 1024]}
                 />
                 {/* Cool fill, opposite the key */}
-                <directionalLight position={[-30, 10, -20]} intensity={0.6 * lightIntensity} color="#a0c4ff" />
-                {/* Brand-tinted rim light for edge definition */}
-                <directionalLight position={[0, 10, -35]} intensity={0.8 * lightIntensity} color="#FF4800" />
+                <directionalLight position={[-30, 10, -20]} intensity={env.lighting.fill} color="#a0c4ff" />
+                {/* Rim light for edge definition */}
+                <directionalLight position={[0, 10, -35]} intensity={env.lighting.rim} color={env.lighting.rimColor} />
 
                 <Suspense fallback={null}>
                     <Center>
-                        <ExtrudedLogo svgContent={svgContent} color={color} material={material} extrudeDepth={extrudeDepth} />
+                        <ExtrudedLogo svgContent={svgContent} color={color} material={material} depth={env.object.depth} bevel={env.object.bevel} />
                     </Center>
                     {material === 'glass' && <Backdrop />}
-                    {showFloor && <Floor />}
+                    {env.floor.visible && <Floor color={env.floor.color} reflectivity={env.floor.reflectivity} roughness={env.floor.roughness} />}
                 </Suspense>
 
                 {/* Procedural (network-free) studio softbox rig — avoids depending on
@@ -277,20 +303,20 @@ export function Logo3DViewer({
                     a front fill facing the camera, since metal/chrome reflects almost
                     nothing without a light source roughly opposite the viewer. */}
                 <Environment resolution={256}>
-                    <Lightformer form="rect" intensity={5 * lightIntensity} rotation-x={Math.PI / 2} position={[0, 12, -6]} scale={[10, 10, 1]} />
-                    <Lightformer form="rect" intensity={2.5 * lightIntensity} rotation-y={Math.PI / 2} position={[-14, 2, 0]} scale={[10, 6, 1]} />
-                    <Lightformer form="rect" intensity={2.5 * lightIntensity} rotation-y={-Math.PI / 2} position={[14, 2, 0]} scale={[10, 6, 1]} />
-                    <Lightformer form="rect" intensity={3 * lightIntensity} position={[0, 0, 30]} scale={[24, 24, 1]} color="#ffffff" />
-                    <Lightformer form="ring" color="#FF4800" intensity={2.5 * lightIntensity} scale={5} position={[0, -6, 6]} rotation-x={Math.PI / 3} />
+                    <Lightformer form="rect" intensity={5 * reflectionScale} rotation-x={Math.PI / 2} position={[0, 12, -6]} scale={[10, 10, 1]} />
+                    <Lightformer form="rect" intensity={2.5 * reflectionScale} rotation-y={Math.PI / 2} position={[-14, 2, 0]} scale={[10, 6, 1]} />
+                    <Lightformer form="rect" intensity={2.5 * reflectionScale} rotation-y={-Math.PI / 2} position={[14, 2, 0]} scale={[10, 6, 1]} />
+                    <Lightformer form="rect" intensity={3 * reflectionScale} position={[0, 0, 30]} scale={[24, 24, 1]} color="#ffffff" />
+                    <Lightformer form="ring" color={env.lighting.rimColor} intensity={2.5 * reflectionScale} scale={5} position={[0, -6, 6]} rotation-x={Math.PI / 3} />
                 </Environment>
 
                 <EffectComposer enableNormalPass multisampling={0}>
-                    <N8AO aoRadius={4} intensity={1.5} distanceFalloff={1} />
-                    <Bloom mipmapBlur luminanceThreshold={1.05} intensity={0.5} />
-                    <Vignette eskil={false} offset={0.15} darkness={0.6} />
+                    <N8AO aoRadius={4} intensity={env.postfx.ao} distanceFalloff={1} />
+                    <Bloom mipmapBlur luminanceThreshold={1.05} intensity={env.postfx.bloom} />
+                    <Vignette eskil={false} offset={0.15} darkness={env.postfx.vignette} />
                 </EffectComposer>
 
-                <Rig autoRotate={autoRotate} />
+                <Rig autoRotate={env.autoRotate} rotateSpeed={env.rotateSpeed} />
             </Canvas>
         </div>
     )

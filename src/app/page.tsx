@@ -25,11 +25,35 @@ export default function Home() {
 
   // 3D scene controls — a DialKit panel instead of hand-rolled sliders,
   // shown inline in the 3D tab's sidebar (see `mode="inline"` below).
+  // Nested objects become collapsible folders in the panel.
   const env = useDialKit('Environment', {
     autoRotate: true,
-    light: [1, 0.4, 2, 0.05],
-    depth: [6, 2, 14, 0.5],
-    floor: true,
+    rotateSpeed: [2.2, 0.5, 6, 0.1],
+    camera: {
+      fov: [35, 20, 60, 1],
+    },
+    lighting: {
+      key: [1.6, 0, 4, 0.1],
+      fill: [0.6, 0, 4, 0.1],
+      rim: [0.8, 0, 4, 0.1],
+      rimColor: '#FF4800',
+      ambient: [0.5, 0, 2, 0.05],
+    },
+    floor: {
+      visible: true,
+      color: '#050505',
+      reflectivity: [12, 0, 40, 1],
+      roughness: [1, 0, 1, 0.05],
+    },
+    object: {
+      depth: [6, 2, 14, 0.5],
+      bevel: [0.8, 0, 2, 0.1],
+    },
+    postfx: {
+      bloom: [0.5, 0, 2, 0.05],
+      ao: [1.5, 0, 4, 0.1],
+      vignette: [0.6, 0, 1, 0.05],
+    },
   })
 
   const handleFileLoad = (text: string, name: string) => {
@@ -235,10 +259,7 @@ export default function Home() {
               svgContent={svgContent}
               color={primaryColor}
               material={logoMaterial}
-              autoRotate={env.autoRotate}
-              extrudeDepth={env.depth}
-              lightIntensity={env.light}
-              showFloor={env.floor}
+              env={env}
             />
             <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-[11px] text-zinc-600">
               Drag to orbit · scroll to zoom
@@ -270,10 +291,12 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="rounded-lg overflow-hidden border border-white/[0.06] h-[270px]">
+            <div className="rounded-lg overflow-hidden border border-white/[0.06] h-[560px]">
               {/* DialKit hides itself in production builds by default (it's
                   meant as a dev-time tweaking tool) — these are real
-                  user-facing controls, so it needs to stay visible. */}
+                  user-facing controls, so it needs to stay visible. Tall
+                  enough for the folders below to be visible without opening
+                  each one; it scrolls internally past that. */}
               <DialRoot mode="inline" theme="dark" productionEnabled />
             </div>
           </aside>
