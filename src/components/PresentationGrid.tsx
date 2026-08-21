@@ -20,7 +20,7 @@ export function PresentationGrid({ svgContent, primaryColor, secondaryColor, siz
 
     const renderBlock = (bgColor: string, logoColor: string) => (
         <div
-            className="w-full aspect-[16/9] flex flex-col items-center justify-center rounded-[20px] shadow-[0_4px_24px_rgba(0,0,0,0.02)] overflow-hidden relative border border-black/5"
+            className="w-full aspect-[16/9] flex flex-col items-center justify-center rounded-xl overflow-hidden relative border border-white/[0.08]"
             style={{ backgroundColor: bgColor }}
         >
             <div
@@ -32,7 +32,7 @@ export function PresentationGrid({ svgContent, primaryColor, secondaryColor, siz
     )
 
     return (
-        <div className="flex flex-col gap-3 w-full h-auto p-2 bg-white rounded-3xl">
+        <div className="flex flex-col gap-3 w-full h-auto">
             {renderBlock(primaryColor, '#ffffff')}
             {renderBlock(secondaryColor, '#ffffff')}
             {renderBlock('#ffffff', '#000000')}

@@ -1,7 +1,3 @@
-import {
-    Card,
-    CardContent,
-} from "@/components/ui/card"
 import { UploadCloud, RefreshCw } from "lucide-react"
 import { useState } from "react"
 
@@ -60,19 +56,21 @@ export function SVGDropzone({ onSVGLoad }: SVGDropzoneProps) {
 
     if (svgContent) {
         return (
-            <Card className="border border-slate-200 bg-white rounded-[14px] shadow-none m-0 overflow-hidden">
-                <CardContent className="flex flex-col items-center justify-center p-4 text-center">
-                    {/* SVG Preview */}
-                    <div
-                        className="w-full aspect-square max-h-[120px] flex items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:max-w-[80px] [&>svg]:max-h-[80px] [&>svg]:object-contain"
-                        dangerouslySetInnerHTML={{ __html: svgContent }}
-                    />
+            <div className="border border-white/[0.08] bg-[#0D0D0F] rounded-xl overflow-hidden">
+                <div className="flex flex-col items-center justify-center p-4 text-center">
+                    {/* SVG Preview — neutral light chip so any logo color (incl. black) stays visible */}
+                    <div className="w-full aspect-square max-h-[120px] flex items-center justify-center rounded-lg bg-[#F4F4F5] p-4">
+                        <div
+                            className="w-full h-full flex items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:max-w-[64px] [&>svg]:max-h-[64px] [&>svg]:object-contain"
+                            dangerouslySetInnerHTML={{ __html: svgContent }}
+                        />
+                    </div>
                     {/* File name */}
-                    <p className="text-[10px] text-slate-400 mt-2 truncate max-w-full">{fileName}</p>
+                    <p className="text-[10px] text-zinc-500 mt-2 truncate max-w-full">{fileName}</p>
                     {/* Replace button */}
                     <button
                         onClick={handleReplace}
-                        className="mt-3 flex items-center gap-1.5 px-4 py-2 text-[11px] font-semibold text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                        className="mt-3 flex items-center gap-1.5 px-4 py-2 text-[11px] font-semibold text-zinc-300 bg-white/[0.06] hover:bg-white/[0.1] rounded-lg transition-colors"
                     >
                         <RefreshCw className="w-3 h-3" />
                         Replace Logo
@@ -84,22 +82,22 @@ export function SVGDropzone({ onSVGLoad }: SVGDropzoneProps) {
                         className="hidden"
                         onChange={handleFileChange}
                     />
-                </CardContent>
-            </Card>
+                </div>
+            </div>
         )
     }
 
     return (
-        <Card
-            className="border-[1.5px] border-dashed border-[#FF8A50] bg-white hover:bg-orange-50/30 transition-colors cursor-pointer rounded-[14px] shadow-none m-0"
+        <div
+            className="border-[1.5px] border-dashed border-[#FF4800]/40 bg-white/[0.02] hover:bg-[#FF4800]/[0.04] hover:border-[#FF4800]/60 transition-colors cursor-pointer rounded-xl"
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onClick={() => document.getElementById("svg-upload")?.click()}
         >
-            <CardContent className="flex flex-col items-center justify-center p-8 py-10 text-center text-slate-800">
-                <UploadCloud className="w-6 h-6 mb-3 text-slate-800 stroke-[1.5]" />
-                <p className="text-[13px] font-bold tracking-tight">Click or Drag and Drop an SVG</p>
-                <p className="text-[10px] text-slate-400 mt-1">Max File Size : 5MB</p>
+            <div className="flex flex-col items-center justify-center p-8 py-10 text-center">
+                <UploadCloud className="w-6 h-6 mb-3 text-zinc-300 stroke-[1.5]" />
+                <p className="text-[13px] font-semibold tracking-tight text-zinc-200">Click or Drag and Drop an SVG</p>
+                <p className="text-[10px] text-zinc-500 mt-1">Max File Size : 5MB</p>
                 <input
                     id="svg-upload"
                     type="file"
@@ -107,7 +105,7 @@ export function SVGDropzone({ onSVGLoad }: SVGDropzoneProps) {
                     className="hidden"
                     onChange={handleFileChange}
                 />
-            </CardContent>
-        </Card>
+            </div>
+        </div>
     )
 }

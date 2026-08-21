@@ -66,16 +66,16 @@ export function ColorPickerDuo({ primaryColor, secondaryColor, onPrimaryChange, 
             <div className="grid grid-cols-2 gap-3">
                 {/* Primary */}
                 <div className="space-y-2">
-                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">Primary Color</label>
+                    <label className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest block">Primary Color</label>
                     <button
                         onClick={() => handleToggle('primary')}
-                        className={`flex items-center gap-2.5 w-full border rounded-xl p-2 bg-white hover:border-slate-300 hover:shadow-sm transition-all group ${activeColor === 'primary' ? 'border-blue-400 ring-2 ring-blue-500/15 shadow-sm' : 'border-slate-200'}`}
+                        className={`flex items-center gap-2.5 w-full border rounded-lg p-2 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05] transition-all group ${activeColor === 'primary' ? 'border-[#FF4800]/60 ring-2 ring-[#FF4800]/15' : 'border-white/[0.08]'}`}
                     >
                         <div
-                            className="w-7 h-7 rounded-lg shadow-inner border border-black/10 flex-shrink-0 transition-transform group-hover:scale-105"
+                            className="w-7 h-7 rounded-md shadow-inner border border-white/10 flex-shrink-0 transition-transform group-hover:scale-105"
                             style={{ backgroundColor: primaryColor }}
                         />
-                        <span className="text-[11px] font-semibold text-slate-700 tracking-wide font-mono">
+                        <span className="text-[11px] font-semibold text-zinc-300 tracking-wide font-mono">
                             {primaryColor.toUpperCase()}
                         </span>
                     </button>
@@ -83,16 +83,16 @@ export function ColorPickerDuo({ primaryColor, secondaryColor, onPrimaryChange, 
 
                 {/* Secondary */}
                 <div className="space-y-2">
-                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">Secondary Color</label>
+                    <label className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest block">Secondary Color</label>
                     <button
                         onClick={() => handleToggle('secondary')}
-                        className={`flex items-center gap-2.5 w-full border rounded-xl p-2 bg-white hover:border-slate-300 hover:shadow-sm transition-all group ${activeColor === 'secondary' ? 'border-blue-400 ring-2 ring-blue-500/15 shadow-sm' : 'border-slate-200'}`}
+                        className={`flex items-center gap-2.5 w-full border rounded-lg p-2 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05] transition-all group ${activeColor === 'secondary' ? 'border-[#FF4800]/60 ring-2 ring-[#FF4800]/15' : 'border-white/[0.08]'}`}
                     >
                         <div
-                            className="w-7 h-7 rounded-lg shadow-inner border border-black/10 flex-shrink-0 transition-transform group-hover:scale-105"
+                            className="w-7 h-7 rounded-md shadow-inner border border-white/10 flex-shrink-0 transition-transform group-hover:scale-105"
                             style={{ backgroundColor: secondaryColor }}
                         />
-                        <span className="text-[11px] font-semibold text-slate-700 tracking-wide font-mono">
+                        <span className="text-[11px] font-semibold text-zinc-300 tracking-wide font-mono">
                             {secondaryColor.toUpperCase()}
                         </span>
                     </button>
@@ -105,7 +105,7 @@ export function ColorPickerDuo({ primaryColor, secondaryColor, onPrimaryChange, 
                 style={{ maxHeight: activeColor ? `${panelHeight}px` : '0px', opacity: activeColor ? 1 : 0 }}
             >
                 <div ref={contentRef} className="pt-3">
-                    <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.10)] border border-black/5 p-4">
+                    <div className="bg-[#151517] rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] border border-white/[0.08] p-4">
                         {/* Picker */}
                         <div className="color-picker-apple">
                             <HexColorPicker color={currentColor} onChange={currentOnChange} />
@@ -114,7 +114,7 @@ export function ColorPickerDuo({ primaryColor, secondaryColor, onPrimaryChange, 
                         {/* Hex input + swatch preview */}
                         <div className="mt-3 flex items-center gap-2">
                             <div
-                                className="w-7 h-7 rounded-lg border border-black/10 shadow-inner flex-shrink-0 transition-colors duration-200"
+                                className="w-7 h-7 rounded-md border border-white/10 shadow-inner flex-shrink-0 transition-colors duration-200"
                                 style={{ backgroundColor: currentColor }}
                             />
                             <input
@@ -127,7 +127,7 @@ export function ColorPickerDuo({ primaryColor, secondaryColor, onPrimaryChange, 
                                     }
                                 }}
                                 maxLength={7}
-                                className="flex-1 text-[12px] font-mono font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
+                                className="flex-1 text-[12px] font-mono font-semibold text-zinc-200 bg-white/[0.04] border border-white/[0.08] rounded-md px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#FF4800]/25 focus:border-[#FF4800]/50 transition-all"
                                 placeholder="#000000"
                             />
                         </div>
@@ -138,7 +138,7 @@ export function ColorPickerDuo({ primaryColor, secondaryColor, onPrimaryChange, 
                                 <button
                                     key={c}
                                     onClick={() => currentOnChange(c)}
-                                    className={`w-5 h-5 rounded-full border shadow-sm hover:scale-125 transition-transform ${c === '#FFFFFF' ? 'border-slate-300' : 'border-black/10'}`}
+                                    className={`w-5 h-5 rounded-full border shadow-sm hover:scale-125 transition-transform ${c === '#FFFFFF' ? 'border-white/20' : 'border-white/10'}`}
                                     style={{ backgroundColor: c }}
                                     title={c}
                                 />
