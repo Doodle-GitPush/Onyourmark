@@ -6,6 +6,7 @@ import { PresentationGrid } from "@/components/PresentationGrid"
 import { ColorPickerDuo } from "@/components/ColorPicker"
 import { AIInsightSlide, LogoInsight } from "@/components/AIInsightSlide"
 import { Logo3DViewer, LogoMaterial } from "@/components/Logo3DViewer"
+import { useDialKit, DialRoot } from "dialkit"
 import { jsPDF } from "jspdf"
 import { toJpeg } from "html-to-image"
 
@@ -21,10 +22,15 @@ export default function Home() {
   const [isExporting, setIsExporting] = useState(false)
   const [logoInsight, setLogoInsight] = useState<LogoInsight | null>(null)
   const [logoMaterial, setLogoMaterial] = useState<LogoMaterial>("chrome")
-  const [autoRotate, setAutoRotate] = useState(true)
-  const [lightIntensity, setLightIntensity] = useState(1)
-  const [extrudeDepth, setExtrudeDepth] = useState(6)
-  const [showFloor, setShowFloor] = useState(true)
+
+  // 3D scene controls — a DialKit panel instead of hand-rolled sliders,
+  // shown inline in the 3D tab's sidebar (see `mode="inline"` below).
+  const env = useDialKit('Environment', {
+    autoRotate: true,
+    light: [1, 0.4, 2, 0.05],
+    depth: [6, 2, 14, 0.5],
+    floor: true,
+  })
 
   const handleFileLoad = (text: string, name: string) => {
     setSvgContent(text)
@@ -229,10 +235,10 @@ export default function Home() {
               svgContent={svgContent}
               color={primaryColor}
               material={logoMaterial}
-              autoRotate={autoRotate}
-              extrudeDepth={extrudeDepth}
-              lightIntensity={lightIntensity}
-              showFloor={showFloor}
+              autoRotate={env.autoRotate}
+              extrudeDepth={env.depth}
+              lightIntensity={env.light}
+              showFloor={env.floor}
             />
             <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-[11px] text-zinc-600">
               Drag to orbit · scroll to zoom
@@ -264,46 +270,11 @@ export default function Home() {
               </div>
             </div>
 
-            <div>
-              <label className="text-[10px] uppercase tracking-widest text-zinc-600 block">Environment</label>
-              <div className="mt-4 space-y-5">
-                <div className="flex items-center gap-3">
-                  <span className="text-[11px] text-zinc-500 w-12 shrink-0">Light</span>
-                  <input
-                    type="range"
-                    min={0.4}
-                    max={2}
-                    step={0.05}
-                    value={lightIntensity}
-                    onChange={(e) => setLightIntensity(Number(e.target.value))}
-                    className="flex-1 h-px bg-zinc-700 accent-[#FF4800] cursor-pointer"
-                  />
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-[11px] text-zinc-500 w-12 shrink-0">Depth</span>
-                  <input
-                    type="range"
-                    min={2}
-                    max={14}
-                    step={0.5}
-                    value={extrudeDepth}
-                    onChange={(e) => setExtrudeDepth(Number(e.target.value))}
-                    className="flex-1 h-px bg-zinc-700 accent-[#FF4800] cursor-pointer"
-                  />
-                </div>
-                <button
-                  onClick={() => setShowFloor((v) => !v)}
-                  className={`block text-[11px] transition-colors ${showFloor ? 'text-zinc-100' : 'text-zinc-600 hover:text-zinc-300'}`}
-                >
-                  Floor {showFloor ? 'on' : 'off'}
-                </button>
-                <button
-                  onClick={() => setAutoRotate((v) => !v)}
-                  className={`block text-[11px] transition-colors ${autoRotate ? 'text-[#FF4800]' : 'text-zinc-600 hover:text-zinc-300'}`}
-                >
-                  Auto-rotate {autoRotate ? 'on' : 'off'}
-                </button>
-              </div>
+            <div className="rounded-lg overflow-hidden border border-white/[0.06] h-[270px]">
+              {/* DialKit hides itself in production builds by default (it's
+                  meant as a dev-time tweaking tool) — these are real
+                  user-facing controls, so it needs to stay visible. */}
+              <DialRoot mode="inline" theme="dark" productionEnabled />
             </div>
           </aside>
         </main>
