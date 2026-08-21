@@ -2,12 +2,12 @@ import { Plus } from "lucide-react"
 import { useState } from "react"
 
 interface SVGDropzoneProps {
-    onSVGLoad: (svgText: string) => void
+    svgContent: string
+    fileName: string
+    onFileLoad: (svgText: string, fileName: string) => void
 }
 
-export function SVGDropzone({ onSVGLoad }: SVGDropzoneProps) {
-    const [svgContent, setSvgContent] = useState<string>("")
-    const [fileName, setFileName] = useState<string>("")
+export function SVGDropzone({ svgContent, fileName, onFileLoad }: SVGDropzoneProps) {
     const [isDragOver, setIsDragOver] = useState(false)
 
     const handleDrop = (e: React.DragEvent) => {
@@ -41,9 +41,7 @@ export function SVGDropzone({ onSVGLoad }: SVGDropzoneProps) {
         reader.onload = (e) => {
             const text = e.target?.result
             if (typeof text === "string") {
-                setSvgContent(text)
-                setFileName(file.name)
-                onSVGLoad(text)
+                onFileLoad(text, file.name)
             }
         }
         reader.readAsText(file)

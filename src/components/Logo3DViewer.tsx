@@ -15,6 +15,8 @@ interface Logo3DViewerProps {
     material: LogoMaterial
     autoRotate: boolean
     extrudeDepth?: number
+    lightIntensity?: number
+    showFloor?: boolean
 }
 
 const MATERIAL_PRESETS: Record<LogoMaterial, (color: string) => React.ReactElement> = {
@@ -226,11 +228,19 @@ function Floor() {
     )
 }
 
-export function Logo3DViewer({ svgContent, color, material, autoRotate }: Logo3DViewerProps) {
+export function Logo3DViewer({
+    svgContent,
+    color,
+    material,
+    autoRotate,
+    extrudeDepth = 6,
+    lightIntensity = 1,
+    showFloor = true,
+}: Logo3DViewerProps) {
     if (!svgContent) return null
 
     return (
-        <div className="w-full h-[60vh] min-h-[420px] relative">
+        <div className="w-full h-full relative">
             <Canvas
                 shadows
                 dpr={[1, 2]}
@@ -241,25 +251,25 @@ export function Logo3DViewer({ svgContent, color, material, autoRotate }: Logo3D
                     hard horizon line — keeps the studio floor from reading as a
                     visible "backdrop" against the ultra-minimal page background. */}
                 <fog attach="fog" args={['#0A0A0A', 60, 100]} />
-                <ambientLight intensity={0.5} />
+                <ambientLight intensity={0.5 * lightIntensity} />
                 {/* Key light */}
                 <directionalLight
                     position={[30, 40, 30]}
-                    intensity={1.6}
+                    intensity={1.6 * lightIntensity}
                     castShadow
                     shadow-mapSize={[1024, 1024]}
                 />
                 {/* Cool fill, opposite the key */}
-                <directionalLight position={[-30, 10, -20]} intensity={0.6} color="#a0c4ff" />
+                <directionalLight position={[-30, 10, -20]} intensity={0.6 * lightIntensity} color="#a0c4ff" />
                 {/* Brand-tinted rim light for edge definition */}
-                <directionalLight position={[0, 10, -35]} intensity={0.8} color="#FF4800" />
+                <directionalLight position={[0, 10, -35]} intensity={0.8 * lightIntensity} color="#FF4800" />
 
                 <Suspense fallback={null}>
                     <Center>
-                        <ExtrudedLogo svgContent={svgContent} color={color} material={material} />
+                        <ExtrudedLogo svgContent={svgContent} color={color} material={material} extrudeDepth={extrudeDepth} />
                     </Center>
                     {material === 'glass' && <Backdrop />}
-                    <Floor />
+                    {showFloor && <Floor />}
                 </Suspense>
 
                 {/* Procedural (network-free) studio softbox rig — avoids depending on
@@ -267,11 +277,11 @@ export function Logo3DViewer({ svgContent, color, material, autoRotate }: Logo3D
                     a front fill facing the camera, since metal/chrome reflects almost
                     nothing without a light source roughly opposite the viewer. */}
                 <Environment resolution={256}>
-                    <Lightformer form="rect" intensity={5} rotation-x={Math.PI / 2} position={[0, 12, -6]} scale={[10, 10, 1]} />
-                    <Lightformer form="rect" intensity={2.5} rotation-y={Math.PI / 2} position={[-14, 2, 0]} scale={[10, 6, 1]} />
-                    <Lightformer form="rect" intensity={2.5} rotation-y={-Math.PI / 2} position={[14, 2, 0]} scale={[10, 6, 1]} />
-                    <Lightformer form="rect" intensity={3} position={[0, 0, 30]} scale={[24, 24, 1]} color="#ffffff" />
-                    <Lightformer form="ring" color="#FF4800" intensity={2.5} scale={5} position={[0, -6, 6]} rotation-x={Math.PI / 3} />
+                    <Lightformer form="rect" intensity={5 * lightIntensity} rotation-x={Math.PI / 2} position={[0, 12, -6]} scale={[10, 10, 1]} />
+                    <Lightformer form="rect" intensity={2.5 * lightIntensity} rotation-y={Math.PI / 2} position={[-14, 2, 0]} scale={[10, 6, 1]} />
+                    <Lightformer form="rect" intensity={2.5 * lightIntensity} rotation-y={-Math.PI / 2} position={[14, 2, 0]} scale={[10, 6, 1]} />
+                    <Lightformer form="rect" intensity={3 * lightIntensity} position={[0, 0, 30]} scale={[24, 24, 1]} color="#ffffff" />
+                    <Lightformer form="ring" color="#FF4800" intensity={2.5 * lightIntensity} scale={5} position={[0, -6, 6]} rotation-x={Math.PI / 3} />
                 </Environment>
 
                 <EffectComposer enableNormalPass multisampling={0}>

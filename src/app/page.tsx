@@ -13,6 +13,7 @@ const MATERIALS = ['chrome', 'glass', 'gold', 'matte', 'holo'] as const
 
 export default function Home() {
   const [svgContent, setSvgContent] = useState<string>("")
+  const [fileName, setFileName] = useState<string>("")
   const [primaryColor, setPrimaryColor] = useState<string>("#0066FF")
   const [secondaryColor, setSecondaryColor] = useState<string>("#FF4800")
   const [logoSize, setLogoSize] = useState<number>(30)
@@ -21,6 +22,14 @@ export default function Home() {
   const [logoInsight, setLogoInsight] = useState<LogoInsight | null>(null)
   const [logoMaterial, setLogoMaterial] = useState<LogoMaterial>("chrome")
   const [autoRotate, setAutoRotate] = useState(true)
+  const [lightIntensity, setLightIntensity] = useState(1)
+  const [extrudeDepth, setExtrudeDepth] = useState(6)
+  const [showFloor, setShowFloor] = useState(true)
+
+  const handleFileLoad = (text: string, name: string) => {
+    setSvgContent(text)
+    setFileName(name)
+  }
 
   const aiInsightRef = useRef<HTMLDivElement>(null)
 
@@ -136,9 +145,9 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-zinc-200 font-sans">
+    <div className="h-screen flex flex-col bg-[#0A0A0A] text-zinc-200 font-sans overflow-hidden">
       {/* Header */}
-      <header className="max-w-2xl mx-auto flex items-center justify-between px-6 py-8">
+      <header className="shrink-0 flex items-center justify-between px-6 h-16">
         <span className="text-[13px] tracking-tight text-zinc-100">OnYourMark</span>
         <nav className="flex items-center gap-6 text-[13px]">
           <button
@@ -163,17 +172,76 @@ export default function Home() {
         </nav>
       </header>
 
-      {/* Main */}
-      <main className="max-w-2xl mx-auto px-6 pb-32">
-        {/* Logo + replace — always mounted at a stable position so it never
-            remounts (and loses the uploaded file) as the rest of the page
-            below it appears/disappears or the active tab changes. */}
-        <SVGDropzone onSVGLoad={setSvgContent} />
+      {!svgContent ? (
+        <main className="flex-1 min-h-0 overflow-y-auto">
+          <div className="max-w-2xl mx-auto px-6">
+            <SVGDropzone svgContent={svgContent} fileName={fileName} onFileLoad={handleFileLoad} />
+          </div>
+        </main>
+      ) : activeTab === 'logo' ? (
+        /* Logo tab — single centered column, page-style scroll. */
+        <main className="flex-1 min-h-0 overflow-y-auto">
+          <div className="max-w-2xl mx-auto px-6 pb-32">
+            <SVGDropzone svgContent={svgContent} fileName={fileName} onFileLoad={handleFileLoad} />
 
-        {svgContent && (
-          <div className="mt-20 space-y-20">
-            {/* Colors — visible regardless of tab, since it drives both the
-                2D preview and the 3D material tint. */}
+            <div className="mt-20 space-y-20">
+              <ColorPickerDuo
+                primaryColor={primaryColor}
+                secondaryColor={secondaryColor}
+                onPrimaryChange={setPrimaryColor}
+                onSecondaryChange={setSecondaryColor}
+              />
+
+              {/* Preview */}
+              <div>
+                <PresentationGrid svgContent={svgContent} primaryColor={primaryColor} secondaryColor={secondaryColor} size={logoSize} />
+                <div className="mt-5 flex items-center gap-3">
+                  <span className="text-[10px] uppercase tracking-widest text-zinc-600 w-10">Size</span>
+                  <input
+                    type="range"
+                    min={10}
+                    max={100}
+                    step={1}
+                    value={logoSize}
+                    onChange={(e) => setLogoSize(Number(e.target.value))}
+                    className="flex-1 h-px bg-zinc-700 accent-[#FF4800] cursor-pointer"
+                  />
+                </div>
+              </div>
+
+              {/* AI Insight */}
+              <div ref={aiInsightRef} className="pt-4 border-t border-white/[0.06]">
+                <AIInsightSlide
+                  svgContent={svgContent}
+                  primaryColor={primaryColor}
+                  cachedInsight={logoInsight}
+                  onInsightReady={setLogoInsight}
+                />
+              </div>
+            </div>
+          </div>
+        </main>
+      ) : (
+        /* 3D tab — full-bleed viewport on the left, controls on the right. */
+        <main className="flex-1 min-h-0 flex">
+          <div className="flex-1 min-w-0 relative">
+            <Logo3DViewer
+              svgContent={svgContent}
+              color={primaryColor}
+              material={logoMaterial}
+              autoRotate={autoRotate}
+              extrudeDepth={extrudeDepth}
+              lightIntensity={lightIntensity}
+              showFloor={showFloor}
+            />
+            <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-[11px] text-zinc-600">
+              Drag to orbit · scroll to zoom
+            </p>
+          </div>
+
+          <aside className="w-[280px] shrink-0 border-l border-white/[0.06] overflow-y-auto px-6 py-10 space-y-12">
+            <SVGDropzone svgContent={svgContent} fileName={fileName} onFileLoad={handleFileLoad} />
+
             <ColorPickerDuo
               primaryColor={primaryColor}
               secondaryColor={secondaryColor}
@@ -181,70 +249,65 @@ export default function Home() {
               onSecondaryChange={setSecondaryColor}
             />
 
-            {activeTab === 'logo' ? (
-              <>
-                {/* Preview */}
-                <div>
-                  <PresentationGrid svgContent={svgContent} primaryColor={primaryColor} secondaryColor={secondaryColor} size={logoSize} />
-                  <div className="mt-5 flex items-center gap-3">
-                    <span className="text-[10px] uppercase tracking-widest text-zinc-600 w-10">Size</span>
-                    <input
-                      type="range"
-                      min={10}
-                      max={100}
-                      step={1}
-                      value={logoSize}
-                      onChange={(e) => setLogoSize(Number(e.target.value))}
-                      className="flex-1 h-px bg-zinc-700 accent-[#FF4800] cursor-pointer"
-                    />
-                  </div>
-                </div>
+            <div>
+              <label className="text-[10px] uppercase tracking-widest text-zinc-600 block">Material</label>
+              <div className="mt-3 flex flex-col items-start gap-2.5">
+                {MATERIALS.map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setLogoMaterial(m)}
+                    className={`text-[13px] capitalize tracking-wide transition-colors ${logoMaterial === m ? 'text-zinc-100 underline underline-offset-4 decoration-[#FF4800]' : 'text-zinc-600 hover:text-zinc-300'}`}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-                {/* AI Insight */}
-                <div ref={aiInsightRef} className="pt-4 border-t border-white/[0.06]">
-                  <AIInsightSlide
-                    svgContent={svgContent}
-                    primaryColor={primaryColor}
-                    cachedInsight={logoInsight}
-                    onInsightReady={setLogoInsight}
+            <div>
+              <label className="text-[10px] uppercase tracking-widest text-zinc-600 block">Environment</label>
+              <div className="mt-4 space-y-5">
+                <div className="flex items-center gap-3">
+                  <span className="text-[11px] text-zinc-500 w-12 shrink-0">Light</span>
+                  <input
+                    type="range"
+                    min={0.4}
+                    max={2}
+                    step={0.05}
+                    value={lightIntensity}
+                    onChange={(e) => setLightIntensity(Number(e.target.value))}
+                    className="flex-1 h-px bg-zinc-700 accent-[#FF4800] cursor-pointer"
                   />
                 </div>
-              </>
-            ) : (
-              <div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-5">
-                    {MATERIALS.map((m) => (
-                      <button
-                        key={m}
-                        onClick={() => setLogoMaterial(m)}
-                        className={`text-[11px] capitalize tracking-wide transition-colors ${logoMaterial === m ? 'text-zinc-100 underline underline-offset-8 decoration-[#FF4800]' : 'text-zinc-600 hover:text-zinc-300'}`}
-                      >
-                        {m}
-                      </button>
-                    ))}
-                  </div>
-                  <button
-                    onClick={() => setAutoRotate((v) => !v)}
-                    className={`text-[11px] transition-colors ${autoRotate ? 'text-[#FF4800]' : 'text-zinc-600 hover:text-zinc-300'}`}
-                  >
-                    Auto-rotate {autoRotate ? 'on' : 'off'}
-                  </button>
+                <div className="flex items-center gap-3">
+                  <span className="text-[11px] text-zinc-500 w-12 shrink-0">Depth</span>
+                  <input
+                    type="range"
+                    min={2}
+                    max={14}
+                    step={0.5}
+                    value={extrudeDepth}
+                    onChange={(e) => setExtrudeDepth(Number(e.target.value))}
+                    className="flex-1 h-px bg-zinc-700 accent-[#FF4800] cursor-pointer"
+                  />
                 </div>
-
-                <Logo3DViewer
-                  svgContent={svgContent}
-                  color={primaryColor}
-                  material={logoMaterial}
-                  autoRotate={autoRotate}
-                />
-
-                <p className="text-[11px] text-zinc-600 text-center -mt-2">Drag to orbit · scroll to zoom</p>
+                <button
+                  onClick={() => setShowFloor((v) => !v)}
+                  className={`block text-[11px] transition-colors ${showFloor ? 'text-zinc-100' : 'text-zinc-600 hover:text-zinc-300'}`}
+                >
+                  Floor {showFloor ? 'on' : 'off'}
+                </button>
+                <button
+                  onClick={() => setAutoRotate((v) => !v)}
+                  className={`block text-[11px] transition-colors ${autoRotate ? 'text-[#FF4800]' : 'text-zinc-600 hover:text-zinc-300'}`}
+                >
+                  Auto-rotate {autoRotate ? 'on' : 'off'}
+                </button>
               </div>
-            )}
-          </div>
-        )}
-      </main>
+            </div>
+          </aside>
+        </main>
+      )}
     </div>
   )
 }
