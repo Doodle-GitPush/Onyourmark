@@ -1,4 +1,4 @@
-import { UploadCloud, RefreshCw } from "lucide-react"
+import { Plus } from "lucide-react"
 import { useState } from "react"
 
 interface SVGDropzoneProps {
@@ -8,9 +8,11 @@ interface SVGDropzoneProps {
 export function SVGDropzone({ onSVGLoad }: SVGDropzoneProps) {
     const [svgContent, setSvgContent] = useState<string>("")
     const [fileName, setFileName] = useState<string>("")
+    const [isDragOver, setIsDragOver] = useState(false)
 
     const handleDrop = (e: React.DragEvent) => {
         e.preventDefault()
+        setIsDragOver(false)
         if (e.dataTransfer.files && e.dataTransfer.files[0]) {
             handleFile(e.dataTransfer.files[0])
         }
@@ -18,7 +20,10 @@ export function SVGDropzone({ onSVGLoad }: SVGDropzoneProps) {
 
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault()
+        setIsDragOver(true)
     }
+
+    const handleDragLeave = () => setIsDragOver(false)
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -44,9 +49,7 @@ export function SVGDropzone({ onSVGLoad }: SVGDropzoneProps) {
         reader.readAsText(file)
     }
 
-    const handleReplace = (e: React.MouseEvent) => {
-        e.stopPropagation()
-        // Reset the input so re-uploading the same file triggers onChange
+    const handleReplace = () => {
         const input = document.getElementById("svg-upload") as HTMLInputElement
         if (input) {
             input.value = ""
@@ -56,48 +59,23 @@ export function SVGDropzone({ onSVGLoad }: SVGDropzoneProps) {
 
     if (svgContent) {
         return (
-            <div className="border border-white/[0.08] bg-[#0D0D0F] rounded-xl overflow-hidden">
-                <div className="flex flex-col items-center justify-center p-4 text-center">
-                    {/* SVG Preview — neutral light chip so any logo color (incl. black) stays visible */}
-                    <div className="w-full aspect-square max-h-[120px] flex items-center justify-center rounded-lg bg-[#F4F4F5] p-4">
-                        <div
-                            className="w-full h-full flex items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:max-w-[64px] [&>svg]:max-h-[64px] [&>svg]:object-contain"
-                            dangerouslySetInnerHTML={{ __html: svgContent }}
-                        />
-                    </div>
-                    {/* File name */}
-                    <p className="text-[10px] text-zinc-500 mt-2 truncate max-w-full">{fileName}</p>
-                    {/* Replace button */}
-                    <button
-                        onClick={handleReplace}
-                        className="mt-3 flex items-center gap-1.5 px-4 py-2 text-[11px] font-semibold text-zinc-300 bg-white/[0.06] hover:bg-white/[0.1] rounded-lg transition-colors"
-                    >
-                        <RefreshCw className="w-3 h-3" />
-                        Replace Logo
-                    </button>
-                    <input
-                        id="svg-upload"
-                        type="file"
-                        accept=".svg"
-                        className="hidden"
-                        onChange={handleFileChange}
+            <div className="flex flex-col items-center gap-4">
+                <div className="rounded-2xl bg-[#F4F4F5] p-8 flex items-center justify-center">
+                    <div
+                        className="[&>svg]:w-full [&>svg]:h-full [&>svg]:max-w-[140px] [&>svg]:max-h-[140px] [&>svg]:object-contain"
+                        dangerouslySetInnerHTML={{ __html: svgContent }}
                     />
                 </div>
-            </div>
-        )
-    }
-
-    return (
-        <div
-            className="border-[1.5px] border-dashed border-[#FF4800]/40 bg-white/[0.02] hover:bg-[#FF4800]/[0.04] hover:border-[#FF4800]/60 transition-colors cursor-pointer rounded-xl"
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            onClick={() => document.getElementById("svg-upload")?.click()}
-        >
-            <div className="flex flex-col items-center justify-center p-8 py-10 text-center">
-                <UploadCloud className="w-6 h-6 mb-3 text-zinc-300 stroke-[1.5]" />
-                <p className="text-[13px] font-semibold tracking-tight text-zinc-200">Click or Drag and Drop an SVG</p>
-                <p className="text-[10px] text-zinc-500 mt-1">Max File Size : 5MB</p>
+                <div className="flex items-center gap-3 text-[11px] text-zinc-600">
+                    <span className="truncate max-w-[160px]">{fileName}</span>
+                    <span className="text-zinc-700">·</span>
+                    <button
+                        onClick={handleReplace}
+                        className="text-zinc-400 hover:text-zinc-100 underline underline-offset-4 decoration-zinc-700 transition-colors"
+                    >
+                        Replace
+                    </button>
+                </div>
                 <input
                     id="svg-upload"
                     type="file"
@@ -106,6 +84,28 @@ export function SVGDropzone({ onSVGLoad }: SVGDropzoneProps) {
                     onChange={handleFileChange}
                 />
             </div>
+        )
+    }
+
+    return (
+        <div
+            className={`flex flex-col items-center justify-center gap-4 py-28 cursor-pointer transition-colors ${isDragOver ? "text-zinc-100" : "text-zinc-500 hover:text-zinc-300"}`}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onClick={() => document.getElementById("svg-upload")?.click()}
+        >
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center border transition-colors ${isDragOver ? "border-[#FF4800] text-[#FF4800]" : "border-zinc-700"}`}>
+                <Plus className="w-4 h-4" strokeWidth={1.5} />
+            </div>
+            <p className="text-[13px] tracking-tight">Drop your SVG, or click to browse</p>
+            <input
+                id="svg-upload"
+                type="file"
+                accept=".svg"
+                className="hidden"
+                onChange={handleFileChange}
+            />
         </div>
     )
 }

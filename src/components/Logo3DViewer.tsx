@@ -165,7 +165,7 @@ export function Logo3DViewer({ svgContent, color, material, autoRotate }: Logo3D
     if (!svgContent) return null
 
     return (
-        <div className="w-full h-[560px] rounded-xl overflow-hidden bg-gradient-to-b from-[#232328] via-[#18181c] to-[#0c0c0e] relative">
+        <div className="w-full h-[60vh] min-h-[420px] relative">
             <Canvas
                 shadows
                 dpr={[1, 2]}

@@ -14,8 +14,6 @@ export function ColorPickerDuo({ primaryColor, secondaryColor, onPrimaryChange, 
     const [activeColor, setActiveColor] = useState<'primary' | 'secondary' | null>(null)
     const [hexInput, setHexInput] = useState('')
     const panelRef = useRef<HTMLDivElement>(null)
-    const contentRef = useRef<HTMLDivElement>(null)
-    const [panelHeight, setPanelHeight] = useState(0)
 
     const currentColor = activeColor === 'primary' ? primaryColor : secondaryColor
     const currentOnChange = activeColor === 'primary' ? onPrimaryChange : onSecondaryChange
@@ -25,18 +23,6 @@ export function ColorPickerDuo({ primaryColor, secondaryColor, onPrimaryChange, 
             setHexInput(currentColor.toUpperCase())
         }
     }, [activeColor, currentColor])
-
-    // Measure content height for smooth animation
-    useEffect(() => {
-        if (activeColor && contentRef.current) {
-            // Small delay to let the content render
-            requestAnimationFrame(() => {
-                setPanelHeight(contentRef.current?.scrollHeight || 0)
-            })
-        } else {
-            setPanelHeight(0)
-        }
-    }, [activeColor])
 
     // Close on outside click
     useEffect(() => {
@@ -60,93 +46,68 @@ export function ColorPickerDuo({ primaryColor, secondaryColor, onPrimaryChange, 
         setActiveColor(prev => prev === which ? null : which)
     }
 
-    return (
-        <div className="mt-8" ref={panelRef}>
-            {/* Color swatches row */}
-            <div className="grid grid-cols-2 gap-3">
-                {/* Primary */}
-                <div className="space-y-2">
-                    <label className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest block">Primary Color</label>
-                    <button
-                        onClick={() => handleToggle('primary')}
-                        className={`flex items-center gap-2.5 w-full border rounded-lg p-2 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05] transition-all group ${activeColor === 'primary' ? 'border-[#FF4800]/60 ring-2 ring-[#FF4800]/15' : 'border-white/[0.08]'}`}
-                    >
-                        <div
-                            className="w-7 h-7 rounded-md shadow-inner border border-white/10 flex-shrink-0 transition-transform group-hover:scale-105"
-                            style={{ backgroundColor: primaryColor }}
-                        />
-                        <span className="text-[11px] font-semibold text-zinc-300 tracking-wide font-mono">
-                            {primaryColor.toUpperCase()}
-                        </span>
-                    </button>
-                </div>
+    const swatch = (which: 'primary' | 'secondary', label: string, color: string) => (
+        <button
+            onClick={() => handleToggle(which)}
+            className="flex items-center gap-2.5 group"
+        >
+            <span
+                className={`w-6 h-6 rounded-full flex-shrink-0 transition-transform group-hover:scale-110 ${activeColor === which ? 'ring-2 ring-offset-2 ring-offset-[#0A0A0A] ring-[#FF4800]' : ''}`}
+                style={{ backgroundColor: color }}
+            />
+            <span className="text-left">
+                <span className="block text-[9px] uppercase tracking-widest text-zinc-600">{label}</span>
+                <span className="block text-[12px] font-mono text-zinc-300">{color.toUpperCase()}</span>
+            </span>
+        </button>
+    )
 
-                {/* Secondary */}
-                <div className="space-y-2">
-                    <label className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest block">Secondary Color</label>
-                    <button
-                        onClick={() => handleToggle('secondary')}
-                        className={`flex items-center gap-2.5 w-full border rounded-lg p-2 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05] transition-all group ${activeColor === 'secondary' ? 'border-[#FF4800]/60 ring-2 ring-[#FF4800]/15' : 'border-white/[0.08]'}`}
-                    >
-                        <div
-                            className="w-7 h-7 rounded-md shadow-inner border border-white/10 flex-shrink-0 transition-transform group-hover:scale-105"
-                            style={{ backgroundColor: secondaryColor }}
-                        />
-                        <span className="text-[11px] font-semibold text-zinc-300 tracking-wide font-mono">
-                            {secondaryColor.toUpperCase()}
-                        </span>
-                    </button>
-                </div>
+    return (
+        <div className="relative" ref={panelRef}>
+            <div className="flex items-center gap-8">
+                {swatch('primary', 'Primary', primaryColor)}
+                {swatch('secondary', 'Secondary', secondaryColor)}
             </div>
 
-            {/* Animated expanding panel */}
-            <div
-                className="overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)]"
-                style={{ maxHeight: activeColor ? `${panelHeight}px` : '0px', opacity: activeColor ? 1 : 0 }}
-            >
-                <div ref={contentRef} className="pt-3">
-                    <div className="bg-[#151517] rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] border border-white/[0.08] p-4">
-                        {/* Picker */}
-                        <div className="color-picker-apple">
-                            <HexColorPicker color={currentColor} onChange={currentOnChange} />
-                        </div>
+            {activeColor && (
+                <div className="absolute left-0 top-full mt-4 z-20 w-[220px] rounded-xl bg-[#151517] shadow-[0_16px_48px_rgba(0,0,0,0.55)] p-4">
+                    <div className="color-picker-apple">
+                        <HexColorPicker color={currentColor} onChange={currentOnChange} />
+                    </div>
 
-                        {/* Hex input + swatch preview */}
-                        <div className="mt-3 flex items-center gap-2">
-                            <div
-                                className="w-7 h-7 rounded-md border border-white/10 shadow-inner flex-shrink-0 transition-colors duration-200"
-                                style={{ backgroundColor: currentColor }}
-                            />
-                            <input
-                                type="text"
-                                value={hexInput}
-                                onChange={(e) => handleHexChange(e.target.value)}
-                                onBlur={() => {
-                                    if (!/^#[0-9A-F]{6}$/i.test(hexInput)) {
-                                        setHexInput(currentColor.toUpperCase())
-                                    }
-                                }}
-                                maxLength={7}
-                                className="flex-1 text-[12px] font-mono font-semibold text-zinc-200 bg-white/[0.04] border border-white/[0.08] rounded-md px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#FF4800]/25 focus:border-[#FF4800]/50 transition-all"
-                                placeholder="#000000"
-                            />
-                        </div>
+                    <div className="mt-3 flex items-center gap-2">
+                        <div
+                            className="w-6 h-6 rounded-full flex-shrink-0 transition-colors duration-200"
+                            style={{ backgroundColor: currentColor }}
+                        />
+                        <input
+                            type="text"
+                            value={hexInput}
+                            onChange={(e) => handleHexChange(e.target.value)}
+                            onBlur={() => {
+                                if (!/^#[0-9A-F]{6}$/i.test(hexInput)) {
+                                    setHexInput(currentColor.toUpperCase())
+                                }
+                            }}
+                            maxLength={7}
+                            className="flex-1 text-[12px] font-mono text-zinc-200 bg-transparent border-b border-zinc-700 px-0.5 py-1 focus:outline-none focus:border-[#FF4800] transition-colors"
+                            placeholder="#000000"
+                        />
+                    </div>
 
-                        {/* Quick presets */}
-                        <div className="mt-3 flex gap-1.5 justify-center flex-wrap">
-                            {['#000000', '#FFFFFF', '#FF3B30', '#FF9500', '#FFCC00', '#34C759', '#007AFF', '#5856D6', '#AF52DE', '#FF2D55'].map((c) => (
-                                <button
-                                    key={c}
-                                    onClick={() => currentOnChange(c)}
-                                    className={`w-5 h-5 rounded-full border shadow-sm hover:scale-125 transition-transform ${c === '#FFFFFF' ? 'border-white/20' : 'border-white/10'}`}
-                                    style={{ backgroundColor: c }}
-                                    title={c}
-                                />
-                            ))}
-                        </div>
+                    <div className="mt-3 flex gap-1.5 flex-wrap">
+                        {['#000000', '#FFFFFF', '#FF3B30', '#FF9500', '#FFCC00', '#34C759', '#007AFF', '#5856D6', '#AF52DE', '#FF2D55'].map((c) => (
+                            <button
+                                key={c}
+                                onClick={() => currentOnChange(c)}
+                                className={`w-4 h-4 rounded-full hover:scale-125 transition-transform ${c === '#FFFFFF' ? 'ring-1 ring-inset ring-white/20' : ''}`}
+                                style={{ backgroundColor: c }}
+                                title={c}
+                            />
+                        ))}
                     </div>
                 </div>
-            </div>
+            )}
         </div>
     )
 }
