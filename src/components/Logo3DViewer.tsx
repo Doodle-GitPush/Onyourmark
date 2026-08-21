@@ -2,7 +2,8 @@
 
 import React, { useMemo, useRef, Suspense } from "react"
 import { Canvas, useFrame, useThree } from "@react-three/fiber"
-import { OrbitControls, Environment, Lightformer, ContactShadows, Center } from "@react-three/drei"
+import { OrbitControls, Environment, Lightformer, MeshReflectorMaterial, Center } from "@react-three/drei"
+import { EffectComposer, Bloom, Vignette, N8AO } from "@react-three/postprocessing"
 import { SVGLoader } from "three/examples/jsm/loaders/SVGLoader.js"
 import * as THREE from "three"
 
@@ -21,10 +22,10 @@ const MATERIAL_PRESETS: Record<LogoMaterial, (color: string) => React.ReactEleme
         <meshPhysicalMaterial
             color={color}
             metalness={1}
-            roughness={0.18}
+            roughness={0.12}
             clearcoat={1}
-            clearcoatRoughness={0.15}
-            envMapIntensity={1.8}
+            clearcoatRoughness={0.1}
+            envMapIntensity={2}
         />
     ),
     glass: (color) => (
@@ -35,7 +36,7 @@ const MATERIAL_PRESETS: Record<LogoMaterial, (color: string) => React.ReactEleme
             transmission={0.95}
             thickness={1.2}
             ior={1.5}
-            envMapIntensity={1.4}
+            envMapIntensity={1.6}
             clearcoat={1}
         />
     ),
@@ -43,28 +44,29 @@ const MATERIAL_PRESETS: Record<LogoMaterial, (color: string) => React.ReactEleme
         <meshPhysicalMaterial
             color={color}
             metalness={1}
-            roughness={0.28}
-            clearcoat={0.6}
-            clearcoatRoughness={0.3}
-            envMapIntensity={1.3}
+            roughness={0.24}
+            clearcoat={0.7}
+            clearcoatRoughness={0.25}
+            envMapIntensity={1.6}
         />
     ),
     matte: (color) => (
         <meshStandardMaterial
             color={color}
             metalness={0}
-            roughness={0.85}
+            roughness={0.8}
+            envMapIntensity={0.6}
         />
     ),
     holo: (color) => (
         <meshPhysicalMaterial
             color={color}
             metalness={0.7}
-            roughness={0.15}
+            roughness={0.12}
             iridescence={1}
             iridescenceIOR={1.4}
             iridescenceThicknessRange={[100, 500]}
-            envMapIntensity={1.5}
+            envMapIntensity={1.8}
         />
     ),
 }
@@ -91,8 +93,8 @@ function ExtrudedLogo({ svgContent, color, material, extrudeDepth = 6 }: Omit<Lo
                     bevelEnabled: true,
                     bevelThickness: 1.2,
                     bevelSize: 0.8,
-                    bevelSegments: 3,
-                    curveSegments: 24,
+                    bevelSegments: 5,
+                    curveSegments: 32,
                 })
                 geom.computeVertexNormals()
                 return geom
@@ -121,11 +123,6 @@ function ExtrudedLogo({ svgContent, color, material, extrudeDepth = 6 }: Omit<Lo
         box.getCenter(center)
         return { scale: s, offset: [-center.x, -center.y, -center.z] as [number, number, number] }
     }, [geometries])
-
-    useFrame((_, delta) => {
-        // gentle idle bob handled by parent autorotate via OrbitControls
-        void delta
-    })
 
     if (geometries.length === 0) return null
 
@@ -161,6 +158,28 @@ function Rig({ autoRotate }: { autoRotate: boolean }) {
     )
 }
 
+/** Glossy studio floor — grounds the object with a soft reflection instead
+ *  of a flat contact shadow, without needing a real environment capture. */
+function Floor() {
+    return (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -13, 0]} receiveShadow>
+            <planeGeometry args={[200, 200]} />
+            <MeshReflectorMaterial
+                blur={[400, 100]}
+                resolution={512}
+                mixBlur={1}
+                mixStrength={12}
+                roughness={1}
+                depthScale={1}
+                minDepthThreshold={0.85}
+                color="#050505"
+                metalness={0.2}
+                mirror={0}
+            />
+        </mesh>
+    )
+}
+
 export function Logo3DViewer({ svgContent, color, material, autoRotate }: Logo3DViewerProps) {
     if (!svgContent) return null
 
@@ -172,37 +191,48 @@ export function Logo3DViewer({ svgContent, color, material, autoRotate }: Logo3D
                 camera={{ position: [0, 0, 55], fov: 35 }}
                 gl={{ antialias: true, preserveDrawingBuffer: true }}
             >
-                <ambientLight intensity={0.7} />
+                {/* Fades the floor into the page's own void instead of showing a
+                    hard horizon line — keeps the studio floor from reading as a
+                    visible "backdrop" against the ultra-minimal page background. */}
+                <fog attach="fog" args={['#0A0A0A', 60, 100]} />
+                <ambientLight intensity={0.5} />
+                {/* Key light */}
                 <directionalLight
                     position={[30, 40, 30]}
                     intensity={1.6}
                     castShadow
                     shadow-mapSize={[1024, 1024]}
                 />
-                <directionalLight position={[-30, 10, -20]} intensity={0.8} color="#a0c4ff" />
+                {/* Cool fill, opposite the key */}
+                <directionalLight position={[-30, 10, -20]} intensity={0.6} color="#a0c4ff" />
+                {/* Brand-tinted rim light for edge definition */}
+                <directionalLight position={[0, 10, -35]} intensity={0.8} color="#FF4800" />
 
                 <Suspense fallback={null}>
                     <Center>
                         <ExtrudedLogo svgContent={svgContent} color={color} material={material} />
                     </Center>
+                    <Floor />
                 </Suspense>
 
-                {/* Procedural (network-free) environment for reflections — avoids
-                    depending on a remote HDR fetch that can fail/be blocked. */}
+                {/* Procedural (network-free) studio softbox rig — avoids depending on
+                    a remote HDR fetch that can fail/be blocked. Three softboxes plus
+                    a front fill facing the camera, since metal/chrome reflects almost
+                    nothing without a light source roughly opposite the viewer. */}
                 <Environment resolution={256}>
-                    <group rotation={[-Math.PI / 3, 0, 1]}>
-                        <Lightformer form="rect" intensity={6} rotation-x={Math.PI / 2} position={[0, 5, -9]} scale={8} />
-                        <Lightformer form="circle" intensity={4} rotation-y={Math.PI / 2} position={[-8, 1, -1]} scale={4} />
-                        <Lightformer form="circle" intensity={4} rotation-y={-Math.PI / 2} position={[10, 1, 0]} scale={6} />
-                        <Lightformer form="ring" color="#a78bfa" intensity={3} scale={6} position={[0, 6, -1]} />
-                        <Lightformer form="rect" intensity={2.5} position={[0, -5, 8]} scale={6} rotation-x={-Math.PI / 2} />
-                    </group>
-                    {/* Front softbox facing the camera — chrome/metal reflects almost
-                        nothing without a light source roughly opposite the viewer. */}
+                    <Lightformer form="rect" intensity={5} rotation-x={Math.PI / 2} position={[0, 12, -6]} scale={[10, 10, 1]} />
+                    <Lightformer form="rect" intensity={2.5} rotation-y={Math.PI / 2} position={[-14, 2, 0]} scale={[10, 6, 1]} />
+                    <Lightformer form="rect" intensity={2.5} rotation-y={-Math.PI / 2} position={[14, 2, 0]} scale={[10, 6, 1]} />
                     <Lightformer form="rect" intensity={3} position={[0, 0, 30]} scale={[24, 24, 1]} color="#ffffff" />
+                    <Lightformer form="ring" color="#FF4800" intensity={2.5} scale={5} position={[0, -6, 6]} rotation-x={Math.PI / 3} />
                 </Environment>
 
-                <ContactShadows position={[0, -14, 0]} opacity={0.5} scale={60} blur={2.5} far={20} />
+                <EffectComposer enableNormalPass multisampling={0}>
+                    <N8AO aoRadius={4} intensity={1.5} distanceFalloff={1} />
+                    <Bloom mipmapBlur luminanceThreshold={1.05} intensity={0.5} />
+                    <Vignette eskil={false} offset={0.15} darkness={0.6} />
+                </EffectComposer>
+
                 <Rig autoRotate={autoRotate} />
             </Canvas>
         </div>
