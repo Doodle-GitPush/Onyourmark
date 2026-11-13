@@ -21,11 +21,17 @@ export const SceneEnvContext = createContext<SceneEnv>(DEFAULT_SCENE_ENV)
 
 /**
  * - `edit`: in the deck editor — text is editable, entrances play.
- * - `present`: full screen — live, not editable.
+ * - `present`: full screen — live, not editable; the 3D mark can be orbited.
+ * - `display`: a showcase on the website — live, but hands-off, so it
+ *   never captures the page's scroll.
  * - `thumb`: tiny and static — no WebGL, no transitions.
  * - `export`: static at full resolution, with one real shader/3D frame.
  */
-export type SlideMode = 'edit' | 'present' | 'thumb' | 'export'
+export type SlideMode = 'edit' | 'present' | 'display' | 'thumb' | 'export'
+
+/** Shaders and the 3D mark run in an export, and on screen in any mode but
+ *  a thumbnail. */
+const isLive = (mode: SlideMode, active: boolean) => mode === 'export' || (mode !== 'thumb' && active)
 
 export interface SlideProps {
     page: Page
@@ -85,8 +91,7 @@ function Logo({ svg, mono, style, className }: { svg: string; mono?: string; sty
 function MotionLayer({ brand, mode, active }: { brand: Brand; mode: SlideMode; active: boolean }) {
     const a = primaryOf(brand)
     const b = accentOf(brand)
-    const live = mode === 'export' || ((mode === 'edit' || mode === 'present') && active)
-    if (!live) return <div className="absolute inset-0" style={{ background: motionGradient(a, b) }} />
+    if (!isLive(mode, active)) return <div className="absolute inset-0" style={{ background: motionGradient(a, b) }} />
     return <ShaderCanvas className="absolute inset-0" preset={brand.motion.preset} a={a} b={b} speed={brand.motion.speed} still={mode === 'export'} />
 }
 
@@ -339,7 +344,7 @@ function Typography({ brand, fg, bgHex, index, editable, onOpen }: Ctx) {
 
 function ThreeD({ brand, mode, active, index, onReady }: Ctx) {
     const env = useContext(SceneEnvContext)
-    const live = mode === 'export' || ((mode === 'edit' || mode === 'present') && active)
+    const live = isLive(mode, active)
     return (
         <>
             {live ? (

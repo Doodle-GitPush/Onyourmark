@@ -3,6 +3,10 @@
 Drop in an SVG logo and get a brand deck you can edit page by page, present
 full screen, and export as a PDF.
 
+- `/` — the product site: what the tool does and who it's for, with live
+  demos drawn by the studio's own slide renderer.
+- `/studio` — the tool. (`/?jmt=…` links from JustMyType redirect here.)
+
 ## What it does
 
 - **A first draft from one file.** Uploading a logo builds a deck — cover,
@@ -16,7 +20,7 @@ full screen, and export as a PDF.
 - **Typography.** Pick a starter pairing, or bring one from
   [JustMyType](https://github.com/Doodle-GitPush/justmytype) by pasting its
   share link (or arriving through its "Send to OnYourMark" button, which
-  opens `/?jmt=<share link>`).
+  opens `/studio?jmt=<share link>`).
 - **Motion.** Five shader backgrounds tinted with the brand colours; any
   cover, logo, story or text page can sit on one.
 - **3D studio.** The logo extruded as an object, with materials, lighting and
@@ -30,7 +34,7 @@ Everything is saved in the browser (`localStorage`); there are no accounts.
 
 ```bash
 npm install
-npm run dev      # http://localhost:3000
+npm run dev      # http://localhost:3000 (site), /studio (tool)
 npm run lint
 npm run build
 ```
@@ -50,6 +54,8 @@ the page keeps its starter copy and everything else works.
 | `src/lib/justmytype.ts` | Reads JustMyType share links |
 | `src/components/deck/Slide.tsx` | Draws any page. Sized entirely in `cqw`, so the same markup is a thumbnail, an editor page, a full-screen slide and a PDF page |
 | `src/components/deck/` | The editor: page column, thumbnail rail, dock, present mode, PDF exporter |
+| `src/components/site/` | The product site's sections |
+| `src/app/studio/page.tsx` | The studio |
 | `src/components/Logo3DViewer.tsx` | The three.js scene |
 
 Stack: Next.js 16 · React 19 · Tailwind v4 · Motion · three.js (react-three-fiber).

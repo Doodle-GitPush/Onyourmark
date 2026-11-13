@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "OnYourMark - Presentations Made Easy",
-  description: "Create stunning brand presentations and 3D logo previews instantly.",
+  title: "OnYourMark — Brand decks from one SVG",
+  description: "Drop in a logo and get a brand deck you can edit page by page: logo system, colour, typography, motion and 3D. Present it full screen or export a PDF.",
 };
 
 export default function RootLayout({

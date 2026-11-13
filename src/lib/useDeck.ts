@@ -192,3 +192,25 @@ export function useDeck() {
 }
 
 export type DeckActions = ReturnType<typeof useDeck>['actions']
+
+/** The name of the deck saved in this browser, if there is one. */
+export function savedDeckName(): string | null {
+    try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null')
+        return typeof saved?.brand?.name === 'string' ? saved.brand.name : null
+    } catch {
+        return null
+    }
+}
+
+/** Saves a fresh deck for a logo dropped outside the studio, so the studio
+ *  opens straight onto it. False if the browser won't store it. */
+export function startNewDeck(prepared: PreparedSvg, fileName: string): boolean {
+    const brand = createBrand(prepared.svg, fileName, prepared.colors)
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ brand, pages: defaultDeck(brand) }))
+        return true
+    } catch {
+        return false
+    }
+}
