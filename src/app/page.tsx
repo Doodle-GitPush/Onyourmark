@@ -1,16 +1,24 @@
 "use client"
 
-import React, { useState, useRef, useCallback } from "react"
+import React, { useState, useRef, useCallback, useEffect } from "react"
 import { SVGDropzone } from "@/components/SVGDropzone"
 import { PresentationGrid } from "@/components/PresentationGrid"
 import { ColorPickerDuo } from "@/components/ColorPicker"
 import { AIInsightSlide, LogoInsight } from "@/components/AIInsightSlide"
 import { Logo3DViewer, LogoMaterial } from "@/components/Logo3DViewer"
+import { TypographySection } from "@/components/TypographySection"
+import { BrandType, loadBrand, saveBrand } from "@/lib/brand"
+import { consumeHandoff } from "@/lib/justmytype"
+import { drawTypeSlide } from "@/lib/typeSlide"
 import { useDialKit, DialRoot } from "dialkit"
 import { jsPDF } from "jspdf"
 import { toJpeg } from "html-to-image"
 
 const MATERIALS = ['chrome', 'glass', 'gold', 'matte', 'holo'] as const
+
+// Typography slide copy until the AI insight has a tagline/meaning to offer.
+const SAMPLE_HEADLINE = 'The quick brown fox jumps over the lazy dog.'
+const SAMPLE_BODY = 'Good typography is the invisible thread that holds a design together. It carries the brand\'s voice and guides the reader through meaning.'
 
 export default function Home() {
   const [svgContent, setSvgContent] = useState<string>("")
@@ -22,6 +30,41 @@ export default function Home() {
   const [isExporting, setIsExporting] = useState(false)
   const [logoInsight, setLogoInsight] = useState<LogoInsight | null>(null)
   const [logoMaterial, setLogoMaterial] = useState<LogoMaterial>("chrome")
+  const [brandType, setBrandType] = useState<BrandType | null>(null)
+  const [hydrated, setHydrated] = useState(false)
+
+  // Restore the saved brand after mount (localStorage isn't there during
+  // SSR), then let a pairing handed over from JustMyType win over it.
+  useEffect(() => {
+    const saved = loadBrand()
+    if (saved) {
+      if (saved.logo) {
+        setSvgContent(saved.logo.svg)
+        setFileName(saved.logo.fileName)
+      }
+      setPrimaryColor(saved.colors.primary)
+      setSecondaryColor(saved.colors.secondary)
+      if (saved.type) setBrandType(saved.type)
+      if (saved.insight) setLogoInsight(saved.insight)
+    }
+    const handoff = consumeHandoff()
+    if (handoff) setBrandType(handoff)
+    setHydrated(true)
+  }, [])
+
+  useEffect(() => {
+    // Not before the restore above — the initial defaults would overwrite it.
+    if (!hydrated) return
+    saveBrand({
+      logo: svgContent ? { svg: svgContent, fileName } : undefined,
+      colors: { primary: primaryColor, secondary: secondaryColor },
+      type: brandType ?? undefined,
+      insight: logoInsight ?? undefined,
+    })
+  }, [hydrated, svgContent, fileName, primaryColor, secondaryColor, brandType, logoInsight])
+
+  const typeHeadline = logoInsight?.tagline || SAMPLE_HEADLINE
+  const typeBody = logoInsight?.meaning || SAMPLE_BODY
 
   // 3D scene controls — a DialKit panel instead of hand-rolled sliders,
   // shown inline in the 3D tab's sidebar (see `mode="inline"` below).
@@ -59,6 +102,8 @@ export default function Home() {
   const handleFileLoad = (text: string, name: string) => {
     setSvgContent(text)
     setFileName(name)
+    // Otherwise the previous logo's insight counts as cached for this one.
+    setLogoInsight(null)
   }
 
   const aiInsightRef = useRef<HTMLDivElement>(null)
@@ -143,6 +188,12 @@ export default function Home() {
       await drawLogoSlide(canvas, '#000000', '#ffffff')
       pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, W, H)
 
+      if (brandType) {
+        pdf.addPage([W, H], 'landscape')
+        await drawTypeSlide(canvas, brandType, primaryColor, { headline: typeHeadline, body: typeBody })
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, W, H)
+      }
+
       setActiveTab('logo')
       await new Promise(resolve => setTimeout(resolve, 800))
       if (aiInsightRef.current) {
@@ -206,6 +257,11 @@ export default function Home() {
         <main className="flex-1 min-h-0 overflow-y-auto">
           <div className="max-w-2xl mx-auto px-6">
             <SVGDropzone svgContent={svgContent} fileName={fileName} onFileLoad={handleFileLoad} />
+            {brandType && (
+              <p className="-mt-4 text-center text-[11px] text-zinc-600">
+                {brandType.heading.family} + {brandType.body.family} is ready — add your logo to continue.
+              </p>
+            )}
           </div>
         </main>
       ) : activeTab === 'logo' ? (
@@ -238,6 +294,14 @@ export default function Home() {
                   />
                 </div>
               </div>
+
+              <TypographySection
+                type={brandType}
+                accent={primaryColor}
+                headline={typeHeadline}
+                body={typeBody}
+                onChange={setBrandType}
+              />
 
               {/* AI Insight */}
               <div ref={aiInsightRef} className="pt-4 border-t border-white/[0.06]">
