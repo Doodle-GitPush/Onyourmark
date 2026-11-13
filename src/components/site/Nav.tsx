@@ -63,8 +63,9 @@ export function Nav() {
 
                 <div className="hidden items-center gap-1 md:flex">
                     {LINKS.map((l) => (
-                        <a key={l.href} href={l.href} className="rounded-full px-3.5 py-1.5 text-[13px] text-zinc-400 transition-colors hover:bg-white/[0.05] hover:text-zinc-100">
+                        <a key={l.href} href={l.href} className="group relative px-3.5 py-1.5 text-[13px] text-zinc-400 transition-colors hover:text-zinc-100">
                             {l.label}
+                            <span className="absolute inset-x-3.5 bottom-0.5 h-px origin-right scale-x-0 bg-[#FF4800] transition-transform duration-300 ease-out group-hover:origin-left group-hover:scale-x-100" />
                         </a>
                     ))}
                 </div>

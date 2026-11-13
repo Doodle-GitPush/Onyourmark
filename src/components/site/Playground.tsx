@@ -10,6 +10,7 @@ import { Slide } from '@/components/deck/Slide'
 import { MotionSwatch } from '@/components/deck/ShaderCanvas'
 import { EASE, SPRING } from '@/components/deck/ui'
 import { PALETTES, demoBrand, demoPage } from './demo'
+import { RevealHeading } from './motion'
 
 const BACKGROUNDS = [
     { id: 'primary', label: 'Colour' },
@@ -21,7 +22,7 @@ const BACKGROUNDS = [
 function Group({ label, children }: { label: string; children: React.ReactNode }) {
     return (
         <div>
-            <div className="mb-3 text-[11px] uppercase tracking-[0.18em] text-zinc-600">{label}</div>
+            <div className="mb-2.5 text-[13px] text-zinc-500">{label}</div>
             <div className="flex flex-wrap gap-1.5">{children}</div>
         </div>
     )
@@ -65,17 +66,18 @@ export function Playground() {
     return (
         <section className="px-6 py-28">
             <div className="mx-auto max-w-6xl">
-                <motion.div
-                    initial={{ opacity: 0, y: 24 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, amount: 0.6 }}
-                    transition={{ duration: 0.8, ease: EASE }}
-                    className="mx-auto max-w-2xl text-center"
-                >
-                    <p className="text-[12px] uppercase tracking-[0.22em] text-[#FF4800]">Try it</p>
-                    <h2 className="mt-4 text-[clamp(2rem,4.4vw,3.5rem)] font-medium leading-[1.04] tracking-[-0.035em] text-zinc-50">One brand. Every page.</h2>
-                    <p className="mt-4 text-[16px] leading-relaxed text-zinc-400">Pick a palette, a type pairing and a background. This is the same renderer the studio uses.</p>
-                </motion.div>
+                <div className="mx-auto max-w-2xl text-center">
+                    <RevealHeading text="One brand." muted="Every page." className="text-[clamp(2rem,4.4vw,3.5rem)] font-medium leading-[1.04] tracking-[-0.035em] text-zinc-50" />
+                    <motion.p
+                        initial={{ opacity: 0, y: 16 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true, amount: 0.8 }}
+                        transition={{ duration: 0.8, ease: EASE, delay: 0.2 }}
+                        className="mt-4 text-[16px] leading-relaxed text-zinc-400"
+                    >
+                        Pick a palette, a type pairing and a background. This is the same renderer the studio uses.
+                    </motion.p>
+                </div>
 
                 <motion.div
                     initial={{ opacity: 0, y: 30 }}

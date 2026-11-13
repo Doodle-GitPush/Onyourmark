@@ -10,48 +10,43 @@ import { Slide } from '@/components/deck/Slide'
 import { MotionSwatch } from '@/components/deck/ShaderCanvas'
 import { EASE } from '@/components/deck/ui'
 import { DECK_ORDER, PALETTES, demoBrand, demoPage, useCycle, useMedia } from './demo'
+import { RevealHeading } from './motion'
 
 type StepId = 'draft' | 'edit' | 'system' | 'motion' | 'three' | 'share'
 
-const STEPS: { id: StepId; kicker: string; title: string; body: string; points: string[] }[] = [
+const STEPS: { id: StepId; title: string; body: string; points: string[] }[] = [
     {
         id: 'draft',
-        kicker: 'Generate',
         title: 'A whole deck from one file',
         body: 'Drop in an SVG and nine pages appear — cover, logo, colourways, clear space, palette, typography, motion, 3D and story — already coloured from your artwork.',
         points: ['Colours read from the logo itself', 'Works with Illustrator, Figma and Affinity exports', 'Outlines stay outlines, gradients stay gradients'],
     },
     {
         id: 'edit',
-        kicker: 'Edit',
         title: 'Edit it like a document',
         body: 'Click any line on a slide and rewrite it in place. Add, duplicate, reorder and remove pages, and give each one its own background.',
         points: ['Ten page templates', 'Drag thumbnails to reorder', 'Undo for anything you remove'],
     },
     {
         id: 'system',
-        kicker: 'Brand system',
         title: 'Change it once. Every page follows.',
         body: 'Your palette and typefaces live in one place. Swap a colour or a pairing and the whole deck restyles with it — codes and specimens included.',
         points: ['Up to six colours, with HEX, RGB and CMYK', 'Six starter pairings from Google Fonts', 'Or bring a pairing from JustMyType'],
     },
     {
         id: 'motion',
-        kicker: 'Motion',
         title: 'A brand that moves',
         body: 'Living shader backgrounds, tinted with your colours. Put one behind a cover, a logo or a story page and it plays when you present.',
         points: ['Five presets: flow, aurora, orb, waves, halftone', 'Adjustable speed', 'Captured as a still in the PDF'],
     },
     {
         id: 'three',
-        kicker: '3D',
         title: 'Your mark, as an object',
         body: 'The logo extruded and lit like a product shot. Choose chrome, glass, gold, matte or holographic, and tune the light in the 3D studio.',
         points: ['Five materials', 'Studio lighting and reflections', 'Orbit it live in a presentation'],
     },
     {
         id: 'share',
-        kicker: 'Present & export',
         title: 'Present it, or hand it over',
         body: 'Play the deck full screen with live motion, or export a 1920 × 1080 PDF that matches the screen — fonts, motion and 3D included.',
         points: ['Keyboard or click to advance', 'One PDF, every page', 'Nothing to install, no account'],
@@ -233,21 +228,23 @@ const VISUALS: Record<StepId, (p: { live: boolean }) => React.ReactElement> = {
 
 // ── Layout ─────────────────────────────────────────────────
 
-function StepText({ step, index, active }: { step: (typeof STEPS)[number]; index: number; active: boolean }) {
+function StepText({ step, active }: { step: (typeof STEPS)[number]; active: boolean }) {
     return (
-        <div className={cn('transition-opacity duration-500', active ? 'opacity-100' : 'lg:opacity-30')}>
-            <div className="flex items-center gap-3 text-[12px]">
-                <span className="tabular-nums text-[#FF4800]">0{index + 1}</span>
-                <span className="uppercase tracking-[0.18em] text-zinc-500">{step.kicker}</span>
-            </div>
-            <h3 className="mt-4 text-[clamp(1.75rem,3vw,2.5rem)] font-medium leading-[1.08] tracking-[-0.03em] text-zinc-50">{step.title}</h3>
+        <div className={cn('transition-all duration-500', active ? 'opacity-100' : 'lg:translate-x-[-6px] lg:opacity-25')}>
+            <h3 className="text-[clamp(1.75rem,3vw,2.5rem)] font-medium leading-[1.08] tracking-[-0.03em] text-zinc-50">{step.title}</h3>
             <p className="mt-4 max-w-md text-[16px] leading-relaxed text-zinc-400">{step.body}</p>
             <ul className="mt-6 space-y-2.5">
-                {step.points.map((p) => (
-                    <li key={p} className="flex items-start gap-2.5 text-[14px] text-zinc-300">
+                {step.points.map((p, i) => (
+                    <motion.li
+                        key={p}
+                        initial={false}
+                        animate={active ? { opacity: 1, x: 0 } : { opacity: 0.6, x: -4 }}
+                        transition={{ duration: 0.4, ease: EASE, delay: active ? 0.1 + i * 0.06 : 0 }}
+                        className="flex items-start gap-2.5 text-[14px] text-zinc-300"
+                    >
                         <Check size={15} className="mt-0.5 shrink-0 text-[#FF4800]" />
                         {p}
-                    </li>
+                    </motion.li>
                 ))}
             </ul>
         </div>
@@ -255,13 +252,13 @@ function StepText({ step, index, active }: { step: (typeof STEPS)[number]; index
 }
 
 /** A step on a narrow screen: the text, then its visual right under it. */
-function MobileStep({ step, index }: { step: (typeof STEPS)[number]; index: number }) {
+function MobileStep({ step }: { step: (typeof STEPS)[number] }) {
     const ref = useRef<HTMLDivElement>(null)
     const live = useInView(ref, { amount: 0.4 })
     const Visual = VISUALS[step.id]
     return (
         <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.7, ease: EASE }}>
-            <StepText step={step} index={index} active />
+            <StepText step={step} active />
             <div ref={ref} className="mt-10"><Visual live={live} /></div>
         </motion.div>
     )
@@ -295,7 +292,7 @@ function DesktopStory() {
             <div>
                 {STEPS.map((s, i) => (
                     <div key={s.id} ref={(el) => { stepRefs.current[i] = el }} data-step={i} className="flex min-h-[78vh] items-center">
-                        <StepText step={s} index={i} active={i === active} />
+                        <StepText step={s} active={i === active} />
                     </div>
                 ))}
             </div>
@@ -331,25 +328,18 @@ export function Features() {
     return (
         <section id="features" className="relative px-6 py-24">
             <div className="mx-auto max-w-6xl">
-                <motion.div
-                    initial={{ opacity: 0, y: 24 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, amount: 0.6 }}
-                    transition={{ duration: 0.8, ease: EASE }}
-                    className="max-w-2xl"
-                >
-                    <p className="text-[12px] uppercase tracking-[0.22em] text-[#FF4800]">What it does</p>
-                    <h2 className="mt-4 text-[clamp(2rem,4.4vw,3.5rem)] font-medium leading-[1.04] tracking-[-0.035em] text-zinc-50">
-                        Everything a brand presentation needs, <span className="text-zinc-500">without the layout work.</span>
-                    </h2>
-                </motion.div>
+                <RevealHeading
+                    text="Everything a brand presentation needs,"
+                    muted="without the layout work."
+                    className="max-w-2xl text-[clamp(2rem,4.4vw,3.5rem)] font-medium leading-[1.04] tracking-[-0.035em] text-zinc-50"
+                />
 
                 <div className="mt-16 lg:mt-4">
                     {wide === null ? null : wide ? (
                         <DesktopStory />
                     ) : (
                         <div className="space-y-28">
-                            {STEPS.map((s, i) => <MobileStep key={s.id} step={s} index={i} />)}
+                            {STEPS.map((s) => <MobileStep key={s.id} step={s} />)}
                         </div>
                     )}
                 </div>

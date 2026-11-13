@@ -1,8 +1,8 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { AnimatePresence, motion } from 'motion/react'
+import { AnimatePresence, motion, useScroll, useTransform } from 'motion/react'
 import { Dropzone, readSvgFile } from '@/components/Dropzone'
 import { EASE } from '@/components/deck/ui'
 import { PreparedSvg, prepareSvg } from '@/lib/svg'
@@ -13,6 +13,11 @@ import { savedDeckName, startNewDeck } from '@/lib/useDeck'
 export function FinalCta() {
     const router = useRouter()
     const [confirm, setConfirm] = useState<{ prepared: PreparedSvg; fileName: string; existing: string } | null>(null)
+    const ref = useRef<HTMLElement>(null)
+    // The headline grows into place as the section scrolls up to meet it.
+    const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'start 0.25'] })
+    const scale = useTransform(scrollYProgress, [0, 1], [0.82, 1])
+    const opacity = useTransform(scrollYProgress, [0, 0.7], [0, 1])
 
     const begin = (prepared: PreparedSvg, fileName: string) => {
         // Even if the browser won't store it, the studio is where to go next.
@@ -35,13 +40,10 @@ export function FinalCta() {
     }
 
     return (
-        <section className="relative overflow-hidden px-6 py-32 sm:py-40">
+        <section ref={ref} className="relative overflow-hidden px-6 py-32 sm:py-40">
             <div className="relative mx-auto max-w-2xl text-center">
                 <motion.h2
-                    initial={{ opacity: 0, y: 24 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, amount: 0.6 }}
-                    transition={{ duration: 0.8, ease: EASE }}
+                    style={{ scale, opacity }}
                     className="text-[clamp(2.2rem,5.4vw,4.25rem)] font-medium leading-[1.02] tracking-[-0.04em] text-zinc-50"
                 >
                     Your next presentation starts with one file.
