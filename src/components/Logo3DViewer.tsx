@@ -6,8 +6,9 @@ import { OrbitControls, PerspectiveCamera, Environment, Lightformer, MeshReflect
 import { EffectComposer, Bloom, Vignette, N8AO } from "@react-three/postprocessing"
 import { SVGLoader } from "three/examples/jsm/loaders/SVGLoader.js"
 import * as THREE from "three"
+import type { LogoMaterial } from "@/lib/brand"
 
-export type LogoMaterial = "chrome" | "glass" | "gold" | "matte" | "holo"
+export type { LogoMaterial }
 
 /** Everything about the scene itself — as opposed to `color`/`material`,
  *  which describe the logo. Mirrors the shape of the DialKit config in
@@ -22,11 +23,32 @@ export interface SceneEnv {
     postfx: { bloom: number; ao: number; vignette: number }
 }
 
+/** The DialKit panel's starting values — also what a deck page renders
+ *  with until the 3D studio has been opened. */
+export const DEFAULT_SCENE_ENV: SceneEnv = {
+    autoRotate: true,
+    rotateSpeed: 2.2,
+    camera: { fov: 35 },
+    lighting: { key: 1.6, fill: 0.6, rim: 0.8, rimColor: '#FF4800', ambient: 0.5 },
+    floor: { visible: true, color: '#050505', reflectivity: 12, roughness: 1 },
+    object: { depth: 6, bevel: 0.8 },
+    postfx: { bloom: 0.5, ao: 1.5, vignette: 0.6 },
+}
+
 interface Logo3DViewerProps {
     svgContent: string
     color: string
     material: LogoMaterial
     env: SceneEnv
+    /** Orbit and zoom with the pointer. Off inside a deck page, where the
+     *  canvas mustn't swallow the scroll. */
+    interactive?: boolean
+    /** Pixel-ratio cap — an export stage renders at 1920 wide already. */
+    maxDpr?: number
+    /** Hold a fixed three-quarter view instead of spinning — for a still. */
+    still?: boolean
+    /** Called once the scene has actually drawn a few frames. */
+    onReady?: () => void
 }
 
 const MATERIAL_PRESETS: Record<LogoMaterial, (color: string) => React.ReactElement> = {
@@ -187,7 +209,18 @@ function ExtrudedLogo({
     )
 }
 
-function Rig({ autoRotate, rotateSpeed }: { autoRotate: boolean; rotateSpeed: number }) {
+/** Fires `onReady` after enough frames for the environment map, the
+ *  reflections and the post-processing chain to have settled. */
+function ReadySignal({ onReady }: { onReady: () => void }) {
+    const frames = useRef(0)
+    useFrame(() => {
+        frames.current += 1
+        if (frames.current === 12) onReady()
+    })
+    return null
+}
+
+function Rig({ autoRotate, rotateSpeed, interactive }: { autoRotate: boolean; rotateSpeed: number; interactive: boolean }) {
     const { camera } = useThree()
 
     useFrame(() => {
@@ -199,6 +232,8 @@ function Rig({ autoRotate, rotateSpeed }: { autoRotate: boolean; rotateSpeed: nu
             autoRotate={autoRotate}
             autoRotateSpeed={rotateSpeed}
             enablePan={false}
+            enableZoom={interactive}
+            enableRotate={interactive}
             minDistance={20}
             maxDistance={90}
             enableDamping
@@ -251,7 +286,7 @@ function Floor({ color, reflectivity, roughness }: { color: string; reflectivity
     )
 }
 
-export function Logo3DViewer({ svgContent, color, material, env }: Logo3DViewerProps) {
+export function Logo3DViewer({ svgContent, color, material, env, interactive = true, maxDpr = 2, still = false, onReady }: Logo3DViewerProps) {
     if (!svgContent) return null
 
     // Lightformer softboxes drive metal/chrome reflections — scaled against
@@ -260,10 +295,10 @@ export function Logo3DViewer({ svgContent, color, material, env }: Logo3DViewerP
     const reflectionScale = env.lighting.key / 1.6
 
     return (
-        <div className="w-full h-full relative">
+        <div className={`w-full h-full relative ${interactive ? '' : 'pointer-events-none'}`}>
             <Canvas
                 shadows
-                dpr={[1, 2]}
+                dpr={[1, maxDpr]}
                 gl={{ antialias: true, preserveDrawingBuffer: true }}
             >
                 {/* A declarative camera instead of Canvas's `camera` prop (which
@@ -271,7 +306,7 @@ export function Logo3DViewer({ svgContent, color, material, env }: Logo3DViewerP
                     reactive to the DialKit slider, including calling
                     updateProjectionMatrix() on change, without us imperatively
                     mutating the camera object returned from useThree(). */}
-                <PerspectiveCamera makeDefault position={[0, 0, 55]} fov={env.camera.fov} />
+                <PerspectiveCamera makeDefault position={still ? [-24, 9, 49] : [0, 0, 55]} fov={env.camera.fov} />
 
                 {/* Fades the floor into the page's own void instead of showing a
                     hard horizon line — keeps the studio floor from reading as a
@@ -316,7 +351,8 @@ export function Logo3DViewer({ svgContent, color, material, env }: Logo3DViewerP
                     <Vignette eskil={false} offset={0.15} darkness={env.postfx.vignette} />
                 </EffectComposer>
 
-                <Rig autoRotate={env.autoRotate} rotateSpeed={env.rotateSpeed} />
+                <Rig autoRotate={env.autoRotate && !still} rotateSpeed={env.rotateSpeed} interactive={interactive} />
+                {onReady && <ReadySignal onReady={onReady} />}
             </Canvas>
         </div>
     )

@@ -1,73 +1,48 @@
 "use client"
 
-import React, { useState, useRef, useCallback, useEffect } from "react"
-import { SVGDropzone } from "@/components/SVGDropzone"
-import { PresentationGrid } from "@/components/PresentationGrid"
-import { ColorPickerDuo } from "@/components/ColorPicker"
-import { AIInsightSlide, LogoInsight } from "@/components/AIInsightSlide"
-import { Logo3DViewer, LogoMaterial } from "@/components/Logo3DViewer"
-import { TypographySection } from "@/components/TypographySection"
-import { BrandType, loadBrand, saveBrand } from "@/lib/brand"
-import { consumeHandoff } from "@/lib/justmytype"
-import { drawTypeSlide } from "@/lib/typeSlide"
+import React, { useCallback, useEffect, useRef, useState } from "react"
+import dynamic from "next/dynamic"
+import { AnimatePresence, MotionConfig, motion } from "motion/react"
 import { useDialKit, DialRoot } from "dialkit"
-import { jsPDF } from "jspdf"
-import { toJpeg } from "html-to-image"
+import { Download, Play, Undo2 } from "lucide-react"
+import { Landing } from "@/components/Landing"
+import { DeckEditor, Panel, scrollToPage } from "@/components/deck/DeckEditor"
+import { Dock } from "@/components/deck/Dock"
+import { PageRail } from "@/components/deck/PageRail"
+import { PdfExporter } from "@/components/deck/PdfExporter"
+import { Present } from "@/components/deck/Present"
+import { SceneEnvContext } from "@/components/deck/Slide"
+import { EASE, SPRING } from "@/components/deck/ui"
+import { LogoInsight, LogoMaterial, primaryOf } from "@/lib/brand"
+import { Page, PageTemplate, isPresentable, pageLabel } from "@/lib/deck"
+import { SAMPLE_SVG, prepareSvg, rasterize } from "@/lib/svg"
+import { useDeck } from "@/lib/useDeck"
+import { cn } from "@/lib/utils"
 
-const MATERIALS = ['chrome', 'glass', 'gold', 'matte', 'holo'] as const
+const Logo3DViewer = dynamic(() => import("@/components/Logo3DViewer").then((m) => m.Logo3DViewer), { ssr: false })
 
-// Typography slide copy until the AI insight has a tagline/meaning to offer.
-const SAMPLE_HEADLINE = 'The quick brown fox jumps over the lazy dog.'
-const SAMPLE_BODY = 'Good typography is the invisible thread that holds a design together. It carries the brand\'s voice and guides the reader through meaning.'
+const MATERIALS: LogoMaterial[] = ['chrome', 'glass', 'gold', 'matte', 'holo']
+
+type View = 'deck' | 'studio'
+
+interface Toast {
+  id: number
+  message: string
+  action?: { label: string; run: () => void }
+}
 
 export default function Home() {
-  const [svgContent, setSvgContent] = useState<string>("")
-  const [fileName, setFileName] = useState<string>("")
-  const [primaryColor, setPrimaryColor] = useState<string>("#0066FF")
-  const [secondaryColor, setSecondaryColor] = useState<string>("#FF4800")
-  const [logoSize, setLogoSize] = useState<number>(30)
-  const [activeTab, setActiveTab] = useState<"logo" | "3d">("logo")
-  const [isExporting, setIsExporting] = useState(false)
-  const [logoInsight, setLogoInsight] = useState<LogoInsight | null>(null)
-  const [logoMaterial, setLogoMaterial] = useState<LogoMaterial>("chrome")
-  const [brandType, setBrandType] = useState<BrandType | null>(null)
-  const [hydrated, setHydrated] = useState(false)
-
-  // Restore the saved brand after mount (localStorage isn't there during
-  // SSR), then let a pairing handed over from JustMyType win over it.
-  useEffect(() => {
-    const saved = loadBrand()
-    if (saved) {
-      if (saved.logo) {
-        setSvgContent(saved.logo.svg)
-        setFileName(saved.logo.fileName)
-      }
-      setPrimaryColor(saved.colors.primary)
-      setSecondaryColor(saved.colors.secondary)
-      if (saved.type) setBrandType(saved.type)
-      if (saved.insight) setLogoInsight(saved.insight)
-    }
-    const handoff = consumeHandoff()
-    if (handoff) setBrandType(handoff)
-    setHydrated(true)
-  }, [])
-
-  useEffect(() => {
-    // Not before the restore above — the initial defaults would overwrite it.
-    if (!hydrated) return
-    saveBrand({
-      logo: svgContent ? { svg: svgContent, fileName } : undefined,
-      colors: { primary: primaryColor, secondary: secondaryColor },
-      type: brandType ?? undefined,
-      insight: logoInsight ?? undefined,
-    })
-  }, [hydrated, svgContent, fileName, primaryColor, secondaryColor, brandType, logoInsight])
-
-  const typeHeadline = logoInsight?.tagline || SAMPLE_HEADLINE
-  const typeBody = logoInsight?.meaning || SAMPLE_BODY
+  const { hydrated, brand, pages, pendingType, actions } = useDeck()
+  const [view, setView] = useState<View>('deck')
+  const [panel, setPanel] = useState<Panel | null>(null)
+  const [activeId, setActiveId] = useState<string | null>(null)
+  const [presenting, setPresenting] = useState(false)
+  const [exporting, setExporting] = useState<{ done: number; total: number } | null>(null)
+  const [rewriting, setRewriting] = useState(false)
+  const [toast, setToast] = useState<Toast | null>(null)
 
   // 3D scene controls — a DialKit panel instead of hand-rolled sliders,
-  // shown inline in the 3D tab's sidebar (see `mode="inline"` below).
+  // shown inline in the 3D studio's sidebar (see `mode="inline"` below).
   // Nested objects become collapsible folders in the panel.
   const env = useDialKit('Environment', {
     autoRotate: true,
@@ -99,273 +74,350 @@ export default function Home() {
     },
   })
 
-  const handleFileLoad = (text: string, name: string) => {
-    setSvgContent(text)
-    setFileName(name)
-    // Otherwise the previous logo's insight counts as cached for this one.
-    setLogoInsight(null)
-  }
-
-  const aiInsightRef = useRef<HTMLDivElement>(null)
-
-  // ── Canvas-based slide renderer ──────────────────────────────────
-  const getColoredSvg = useCallback((color: string) => {
-    if (!svgContent) return ''
-    return svgContent
-      .replace(/fill="[^"]*"/g, `fill="${color}"`)
-      .replace(/stroke="[^"]*"/g, `stroke="${color}"`)
-      .replace(/style="[^"]*"/g, '')
-  }, [svgContent])
-
-  const loadSvgAsImage = useCallback((svgStr: string): Promise<HTMLImageElement> => {
-    return new Promise((resolve, reject) => {
-      const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' })
-      const url = URL.createObjectURL(blob)
-      const img = new Image()
-      img.onload = () => { resolve(img); URL.revokeObjectURL(url) }
-      img.onerror = (e) => { reject(e); URL.revokeObjectURL(url) }
-      img.src = url
-    })
+  const notify = useCallback((message: string, action?: Toast['action']) => {
+    setToast({ id: Date.now(), message, action })
   }, [])
 
-  const drawLogoSlide = useCallback(async (
-    canvas: HTMLCanvasElement,
-    bgColor: string,
-    logoColor: string
-  ) => {
-    const ctx = canvas.getContext('2d')!
-    const W = canvas.width
-    const H = canvas.height
+  useEffect(() => {
+    if (!toast) return
+    const timer = setTimeout(() => setToast(null), toast.action ? 6000 : 3500)
+    return () => clearTimeout(timer)
+  }, [toast])
 
-    ctx.fillStyle = bgColor
-    ctx.fillRect(0, 0, W, H)
+  // ── Logo in ─────────────────────────────────────────────
+  const loadSvg = useCallback((text: string, fileName: string) => {
+    const prepared = prepareSvg(text)
+    if (!prepared) return 'That file couldn’t be read as an SVG — try exporting it again.'
+    actions.setLogo(prepared, fileName)
+    return null
+  }, [actions])
 
-    const colored = getColoredSvg(logoColor)
-    if (!colored) return
+  const handleFile = useCallback(async (file: File) => {
+    if (file.type !== 'image/svg+xml' && !/\.svg$/i.test(file.name)) return 'That’s not an SVG. Export your logo as .svg and drop it again.'
+    return loadSvg(await file.text(), file.name)
+  }, [loadSvg])
 
+  const replaceLogo = useCallback(async (file: File) => {
+    const error = await handleFile(file)
+    notify(error ?? 'Logo replaced')
+  }, [handleFile, notify])
+
+  // ── AI insight ──────────────────────────────────────────
+  // Runs once per logo on its own; the Story page's button runs it again.
+  const analyze = useCallback(async (svg: string, manual: boolean) => {
+    setRewriting(true)
     try {
-      const img = await loadSvgAsImage(colored)
-      const scale = (logoSize / 100)
-      const logoW = W * scale
-      const logoH = logoW * (img.naturalHeight / img.naturalWidth)
-      const x = (W - logoW) / 2
-      const y = (H - logoH) / 2
-      ctx.drawImage(img, x, y, logoW, logoH)
-    } catch (e) {
-      console.warn('Could not draw SVG logo on canvas', e)
-    }
-  }, [getColoredSvg, loadSvgAsImage, logoSize])
-
-  const handleExport = async () => {
-    if (!svgContent) return
-    setIsExporting(true)
-
-    try {
-      const W = 1920
-      const H = 1080
-      const canvas = document.createElement('canvas')
-      canvas.width = W
-      canvas.height = H
-
-      const pdf = new jsPDF({
-        orientation: 'landscape',
-        unit: 'px',
-        format: [W, H]
+      const res = await fetch('/api/analyze-logo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: await rasterize(svg) }),
       })
-
-      await drawLogoSlide(canvas, primaryColor, '#ffffff')
-      pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, W, H)
-
-      pdf.addPage([W, H], 'landscape')
-      await drawLogoSlide(canvas, secondaryColor, '#ffffff')
-      pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, W, H)
-
-      pdf.addPage([W, H], 'landscape')
-      await drawLogoSlide(canvas, '#ffffff', '#000000')
-      pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, W, H)
-
-      pdf.addPage([W, H], 'landscape')
-      await drawLogoSlide(canvas, '#000000', '#ffffff')
-      pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, W, H)
-
-      if (brandType) {
-        pdf.addPage([W, H], 'landscape')
-        await drawTypeSlide(canvas, brandType, primaryColor, { headline: typeHeadline, body: typeBody })
-        pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, W, H)
-      }
-
-      setActiveTab('logo')
-      await new Promise(resolve => setTimeout(resolve, 800))
-      if (aiInsightRef.current) {
-        aiInsightRef.current.scrollIntoView({ block: 'center' })
-        await new Promise(resolve => setTimeout(resolve, 600))
-        try {
-          const insightImg = await toJpeg(aiInsightRef.current, {
-            quality: 0.95,
-            backgroundColor: '#0A0A0A',
-            pixelRatio: 2,
-          })
-          pdf.addPage([W, H], 'landscape')
-          const cardW = W * 0.72
-          const cardH = cardW * (aiInsightRef.current.offsetHeight / aiInsightRef.current.offsetWidth)
-          const cardX = (W - cardW) / 2
-          const cardY = (H - cardH) / 2
-          pdf.addImage(insightImg, 'JPEG', cardX, cardY, cardW, cardH)
-        } catch (e) {
-          console.warn('Could not capture AI insight slide', e)
-        }
-      }
-
-      pdf.save('onyourmark-presentation.pdf')
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      actions.setInsight(data as LogoInsight)
     } catch (err) {
-      console.error("Export failed", err)
-      alert("Failed to export PDF.")
+      // Unprompted, a failure is silent — the Story page keeps its starter
+      // copy. Asked for, it's explained.
+      if (manual) {
+        notify(err instanceof Error && err.message === 'no_key'
+          ? 'AI writing isn’t set up — add a GEMINI_API_KEY to enable it.'
+          : 'The AI couldn’t write that just now. Try again in a moment.')
+      }
     } finally {
-      setIsExporting(false)
+      setRewriting(false)
     }
+  }, [actions, notify])
+
+  const analyzed = useRef<string | null>(null)
+  const logoSvg = brand?.logo.svg
+  const hasInsight = !!brand?.insight
+  useEffect(() => {
+    if (!logoSvg || hasInsight || analyzed.current === logoSvg) return
+    analyzed.current = logoSvg
+    analyze(logoSvg, false)
+  }, [logoSvg, hasInsight, analyze])
+
+  const rewrite = useCallback(() => {
+    if (!brand) return
+    // Asking for a rewrite hands every story page back to the AI.
+    pages.filter((p) => p.kind === 'story').forEach((p) => actions.patchPage(p.id, { auto: true }))
+    analyze(brand.logo.svg, true)
+  }, [brand, pages, actions, analyze])
+
+  // ── Pages ───────────────────────────────────────────────
+  const addPage = useCallback((template: PageTemplate, index: number) => {
+    const id = actions.addPage(template, index)
+    setView('deck')
+    // After the new page has been laid out.
+    setTimeout(() => scrollToPage(id), 80)
+  }, [actions])
+
+  const removePage = useCallback((page: Page) => {
+    const index = pages.findIndex((p) => p.id === page.id)
+    actions.removePage(page.id)
+    notify(`${pageLabel(page)} page removed`, { label: 'Undo', run: () => actions.insertPage(page, index) })
+  }, [pages, actions, notify])
+
+  const openPanel = useCallback((target: Panel | 'studio') => {
+    if (target === 'studio') {
+      setPanel(null)
+      setView('studio')
+    } else {
+      setPanel(target)
+    }
+  }, [])
+
+  const activeIndex = Math.max(0, pages.findIndex((p) => p.id === activeId))
+  const playable = brand ? pages.filter((p) => isPresentable(p, brand)) : []
+
+  const present = () => {
+    if (!playable.length) return
+    setPanel(null)
+    setPresenting(true)
+  }
+
+  const exportPdf = () => {
+    if (!playable.length || exporting) return
+    setPanel(null)
+    setExporting({ done: 0, total: playable.length })
   }
 
   return (
-    <div className="h-screen flex flex-col bg-[#0A0A0A] text-zinc-200 font-sans overflow-hidden">
-      {/* Header */}
-      <header className="shrink-0 flex items-center justify-between px-6 h-16">
-        <span className="text-[13px] tracking-tight text-zinc-100">OnYourMark</span>
-        <nav className="flex items-center gap-6 text-[13px]">
-          <button
-            onClick={() => setActiveTab('logo')}
-            className={`transition-colors ${activeTab === 'logo' ? 'text-zinc-100' : 'text-zinc-600 hover:text-zinc-300'}`}
-          >
-            Logo
-          </button>
-          <button
-            onClick={() => setActiveTab('3d')}
-            className={`transition-colors ${activeTab === '3d' ? 'text-zinc-100' : 'text-zinc-600 hover:text-zinc-300'}`}
-          >
-            3D
-          </button>
-          <button
-            onClick={handleExport}
-            disabled={!svgContent || isExporting}
-            className="text-zinc-600 hover:text-zinc-300 disabled:opacity-30 disabled:hover:text-zinc-600 transition-colors"
-          >
-            {isExporting ? "Exporting…" : "Export"}
-          </button>
-        </nav>
-      </header>
-
-      {!svgContent ? (
-        <main className="flex-1 min-h-0 overflow-y-auto">
-          <div className="max-w-2xl mx-auto px-6">
-            <SVGDropzone svgContent={svgContent} fileName={fileName} onFileLoad={handleFileLoad} />
-            {brandType && (
-              <p className="-mt-4 text-center text-[11px] text-zinc-600">
-                {brandType.heading.family} + {brandType.body.family} is ready — add your logo to continue.
-              </p>
+    <SceneEnvContext.Provider value={env}>
+      {/* Honour the OS "reduce motion" setting across every animation. */}
+      <MotionConfig reducedMotion="user">
+      <div className="h-screen flex flex-col bg-[#0A0A0A] text-zinc-200 font-sans overflow-hidden">
+        {/* Header */}
+        <header className="relative z-40 shrink-0 flex items-center justify-between gap-4 px-6 h-16">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="text-[13px] tracking-tight text-zinc-100 shrink-0">OnYourMark</span>
+            {brand && (
+              <>
+                <span className="hidden md:inline text-zinc-700">/</span>
+                <input
+                  aria-label="Brand name"
+                  value={brand.name}
+                  onChange={(e) => actions.patchBrand({ name: e.target.value })}
+                  placeholder="Brand name"
+                  spellCheck={false}
+                  style={{ width: `${Math.max(brand.name.length, 6) + 2}ch` }}
+                  className="hidden md:block min-w-0 max-w-[24vw] bg-transparent text-[13px] text-zinc-400 rounded px-1 -mx-1 py-0.5 hover:text-zinc-200 hover:bg-white/[0.04] focus:text-zinc-100 focus:bg-white/[0.06] focus:outline-none transition-colors"
+                />
+              </>
             )}
           </div>
-        </main>
-      ) : activeTab === 'logo' ? (
-        /* Logo tab — single centered column, page-style scroll. */
-        <main className="flex-1 min-h-0 overflow-y-auto">
-          <div className="max-w-2xl mx-auto px-6 pb-32">
-            <SVGDropzone svgContent={svgContent} fileName={fileName} onFileLoad={handleFileLoad} />
 
-            <div className="mt-20 space-y-20">
-              <ColorPickerDuo
-                primaryColor={primaryColor}
-                secondaryColor={secondaryColor}
-                onPrimaryChange={setPrimaryColor}
-                onSecondaryChange={setSecondaryColor}
-              />
+          {brand && (
+            <>
+              <nav className="absolute left-1/2 -translate-x-1/2 flex items-center p-0.5 rounded-full bg-white/[0.04] text-[12px]">
+                {(['deck', 'studio'] as View[]).map((v) => (
+                  <button
+                    key={v}
+                    onClick={() => setView(v)}
+                    aria-pressed={view === v}
+                    className={cn('relative h-7 px-3.5 rounded-full transition-colors duration-200', view === v ? 'text-zinc-100' : 'text-zinc-500 hover:text-zinc-300')}
+                  >
+                    {view === v && <motion.span layoutId="view-pill" transition={SPRING} className="absolute inset-0 rounded-full bg-white/[0.09]" />}
+                    <span className="relative">{v === 'deck' ? 'Deck' : <>3D<span className="hidden sm:inline"> studio</span></>}</span>
+                  </button>
+                ))}
+              </nav>
 
-              {/* Preview */}
+              <div className="flex items-center gap-1.5 text-[12px]">
+                <button
+                  onClick={present}
+                  disabled={!playable.length}
+                  className="group flex items-center gap-1.5 h-8 px-3 rounded-full text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06] active:scale-95 disabled:opacity-30 transition-all duration-200"
+                >
+                  <Play size={12} className="transition-transform duration-300 group-hover:translate-x-0.5" />
+                  <span className="hidden sm:inline">Present</span>
+                </button>
+                <button
+                  onClick={exportPdf}
+                  disabled={!playable.length || !!exporting}
+                  className="group flex items-center gap-1.5 h-8 px-3.5 rounded-full bg-zinc-100 text-zinc-900 font-medium hover:bg-white active:scale-95 disabled:opacity-40 transition-all duration-200"
+                >
+                  <Download size={12} className="transition-transform duration-300 group-hover:translate-y-0.5" />
+                  Export
+                </button>
+              </div>
+            </>
+          )}
+        </header>
+
+        {!hydrated ? (
+          <main className="flex-1" />
+        ) : !brand ? (
+          <Landing onFile={handleFile} onSample={() => loadSvg(SAMPLE_SVG, 'Northpoint.svg')} pendingType={pendingType} />
+        ) : view === 'deck' ? (
+          <motion.main
+            key="deck"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, ease: EASE }}
+            className="relative flex-1 min-h-0 flex flex-col"
+          >
+            <PageRail
+              brand={brand}
+              pages={pages}
+              activeId={activeId}
+              onSelect={scrollToPage}
+              onReorder={actions.reorder}
+              onAdd={(t) => addPage(t, activeIndex + 1)}
+            />
+            <DeckEditor
+              brand={brand}
+              pages={pages}
+              deck={actions}
+              activeId={activeId}
+              onActive={setActiveId}
+              onOpen={openPanel}
+              onRemove={removePage}
+              onAdd={addPage}
+              onRewrite={rewrite}
+              rewriting={rewriting}
+            />
+            <Dock
+              brand={brand}
+              deck={actions}
+              panel={panel}
+              onPanel={setPanel}
+              onLogoFile={replaceLogo}
+              onAddMotionPage={() => addPage('motion', activeIndex + 1)}
+            />
+          </motion.main>
+        ) : (
+          /* 3D studio — full-bleed viewport on the left, controls on the right. */
+          <motion.main
+            key="studio"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, ease: EASE }}
+            className="flex-1 min-h-0 flex"
+          >
+            <div className="flex-1 min-w-0 relative">
+              <Logo3DViewer svgContent={brand.logo.svg} color={primaryOf(brand)} material={brand.material} env={env} />
+              <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-[11px] text-zinc-600">
+                Drag to orbit · scroll to zoom
+              </p>
+            </div>
+
+            <aside className="w-[280px] shrink-0 border-l border-white/[0.06] overflow-y-auto px-6 py-8 space-y-10">
               <div>
-                <PresentationGrid svgContent={svgContent} primaryColor={primaryColor} secondaryColor={secondaryColor} size={logoSize} />
-                <div className="mt-5 flex items-center gap-3">
-                  <span className="text-[10px] uppercase tracking-widest text-zinc-600 w-10">Size</span>
-                  <input
-                    type="range"
-                    min={10}
-                    max={100}
-                    step={1}
-                    value={logoSize}
-                    onChange={(e) => setLogoSize(Number(e.target.value))}
-                    className="flex-1 h-px bg-zinc-700 accent-[#FF4800] cursor-pointer"
+                <label className="text-[10px] uppercase tracking-widest text-zinc-600 block">Material</label>
+                <div className="mt-3 flex flex-col items-start gap-2.5">
+                  {MATERIALS.map((m) => (
+                    <button
+                      key={m}
+                      onClick={() => actions.patchBrand({ material: m })}
+                      className={`text-[13px] capitalize tracking-wide transition-colors ${brand.material === m ? 'text-zinc-100 underline underline-offset-4 decoration-[#FF4800]' : 'text-zinc-600 hover:text-zinc-300'}`}
+                    >
+                      {m}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-4 text-[11px] leading-relaxed text-zinc-600">
+                  Takes your primary colour. What you set here is what the deck’s 3D page shows.
+                </p>
+              </div>
+
+              <div className="rounded-lg overflow-hidden border border-white/[0.06] h-[560px]">
+                {/* DialKit hides itself in production builds by default (it's
+                    meant as a dev-time tweaking tool) — these are real
+                    user-facing controls, so it needs to stay visible. Tall
+                    enough for the folders below to be visible without opening
+                    each one; it scrolls internally past that. */}
+                <DialRoot mode="inline" theme="dark" productionEnabled />
+              </div>
+            </aside>
+          </motion.main>
+        )}
+
+        {/* Toast */}
+        <AnimatePresence>
+          {toast && (
+            <motion.div
+              key={toast.id}
+              role="status"
+              initial={{ opacity: 0, y: -12, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -8, scale: 0.98, transition: { duration: 0.15 } }}
+              transition={SPRING}
+              className="fixed top-[4.5rem] left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 h-10 pl-4 pr-1.5 rounded-full bg-[#1A1A1D] text-[12px] text-zinc-200 ring-1 ring-white/10 shadow-[0_16px_48px_rgba(0,0,0,0.6)]"
+            >
+              <span className="pr-2.5">{toast.message}</span>
+              {toast.action && (
+                <button
+                  onClick={() => {
+                    toast.action?.run()
+                    setToast(null)
+                  }}
+                  className="flex items-center gap-1.5 h-7 px-3 rounded-full bg-white/[0.08] text-zinc-100 hover:bg-white/[0.14] active:scale-95 transition-all duration-150"
+                >
+                  <Undo2 size={12} /> {toast.action.label}
+                </button>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Present */}
+        <AnimatePresence>
+          {presenting && brand && playable.length > 0 && (
+            <Present
+              brand={brand}
+              pages={playable}
+              startIndex={Math.max(0, playable.findIndex((p) => p.id === activeId))}
+              onClose={() => setPresenting(false)}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* Export */}
+        <AnimatePresence>
+          {exporting && (
+            <motion.div
+              role="status"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 grid place-items-center bg-[#0A0A0A]/80 backdrop-blur-md"
+            >
+              <div className="w-56 text-center">
+                <div className="text-[13px] text-zinc-200">Exporting your deck</div>
+                <div className="mt-1 text-[11px] tabular-nums text-zinc-500">
+                  Page {Math.min(exporting.done + 1, exporting.total)} of {exporting.total}
+                </div>
+                <div className="mt-5 h-[2px] rounded-full bg-white/10 overflow-hidden">
+                  <motion.div
+                    className="h-full origin-left bg-[#FF4800]"
+                    initial={{ scaleX: 0 }}
+                    animate={{ scaleX: exporting.done / exporting.total }}
+                    transition={{ duration: 0.4, ease: EASE }}
                   />
                 </div>
               </div>
-
-              <TypographySection
-                type={brandType}
-                accent={primaryColor}
-                headline={typeHeadline}
-                body={typeBody}
-                onChange={setBrandType}
-              />
-
-              {/* AI Insight */}
-              <div ref={aiInsightRef} className="pt-4 border-t border-white/[0.06]">
-                <AIInsightSlide
-                  svgContent={svgContent}
-                  primaryColor={primaryColor}
-                  cachedInsight={logoInsight}
-                  onInsightReady={setLogoInsight}
-                />
-              </div>
-            </div>
-          </div>
-        </main>
-      ) : (
-        /* 3D tab — full-bleed viewport on the left, controls on the right. */
-        <main className="flex-1 min-h-0 flex">
-          <div className="flex-1 min-w-0 relative">
-            <Logo3DViewer
-              svgContent={svgContent}
-              color={primaryColor}
-              material={logoMaterial}
-              env={env}
-            />
-            <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-[11px] text-zinc-600">
-              Drag to orbit · scroll to zoom
-            </p>
-          </div>
-
-          <aside className="w-[280px] shrink-0 border-l border-white/[0.06] overflow-y-auto px-6 py-10 space-y-12">
-            <SVGDropzone svgContent={svgContent} fileName={fileName} onFileLoad={handleFileLoad} />
-
-            <ColorPickerDuo
-              primaryColor={primaryColor}
-              secondaryColor={secondaryColor}
-              onPrimaryChange={setPrimaryColor}
-              onSecondaryChange={setSecondaryColor}
-            />
-
-            <div>
-              <label className="text-[10px] uppercase tracking-widest text-zinc-600 block">Material</label>
-              <div className="mt-3 flex flex-col items-start gap-2.5">
-                {MATERIALS.map((m) => (
-                  <button
-                    key={m}
-                    onClick={() => setLogoMaterial(m)}
-                    className={`text-[13px] capitalize tracking-wide transition-colors ${logoMaterial === m ? 'text-zinc-100 underline underline-offset-4 decoration-[#FF4800]' : 'text-zinc-600 hover:text-zinc-300'}`}
-                  >
-                    {m}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="rounded-lg overflow-hidden border border-white/[0.06] h-[560px]">
-              {/* DialKit hides itself in production builds by default (it's
-                  meant as a dev-time tweaking tool) — these are real
-                  user-facing controls, so it needs to stay visible. Tall
-                  enough for the folders below to be visible without opening
-                  each one; it scrolls internally past that. */}
-              <DialRoot mode="inline" theme="dark" productionEnabled />
-            </div>
-          </aside>
-        </main>
-      )}
-    </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        {exporting && brand && (
+          <PdfExporter
+            brand={brand}
+            pages={playable}
+            onProgress={(done, total) => setExporting({ done, total })}
+            onDone={(error) => {
+              setExporting(null)
+              if (error) {
+                console.error('Export failed', error)
+                notify('The export didn’t finish. Try again.')
+              } else {
+                notify('Deck exported')
+              }
+            }}
+          />
+        )}
+      </div>
+      </MotionConfig>
+    </SceneEnvContext.Provider>
   )
 }

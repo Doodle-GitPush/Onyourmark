@@ -1,11 +1,12 @@
 /**
  * The Brand record — the one source of truth every tool reads and writes.
  * OnYourMark owns the logo/colour/3D parts; typography comes from
- * JustMyType and motion will come from SkidLab. Each part is optional so a
- * brand can be built up one tool at a time.
+ * JustMyType and motion will come from SkidLab. A deck is a list of pages
+ * that all render from this record, so changing a colour or a typeface
+ * here restyles every page at once.
  */
 
-import type { LogoInsight } from '@/components/AIInsightSlide'
+import { INK, PAPER, companion, contrastOn } from './color'
 
 /** One face in a pairing. Mirrors JustMyType's per-font controls exactly
  *  (`size`/`weight`/`lh`/`ls`, with `ls` in em) so a pairing round-trips
@@ -31,45 +32,101 @@ export interface BrandType {
     sourceUrl?: string
 }
 
-/** Placeholder until SkidLab ships — kept in the schema now so saved
- *  brands don't need migrating when it lands. */
+export interface BrandColor {
+    id: string
+    name: string
+    hex: string
+}
+
+export const MOTION_PRESETS = ['flow', 'aurora', 'orb', 'waves', 'grid'] as const
+export type MotionPreset = (typeof MOTION_PRESETS)[number]
+
+/** The brand's moving background. Built-in presets for now — SkidLab
+ *  shaders will join this list as further preset ids. */
 export interface BrandMotion {
-    shaders: { presetId: string; params: Record<string, number | string> }[]
+    preset: MotionPreset
+    speed: number
+}
+
+export type LogoMaterial = 'chrome' | 'glass' | 'gold' | 'matte' | 'holo'
+
+export interface LogoInsight {
+    brandName: string
+    tagline: string
+    meaning: string
+    personality: string[]
+    colorStory: string
+    industry: string
 }
 
 export interface Brand {
-    logo?: { svg: string; fileName: string }
-    colors: { primary: string; secondary: string }
+    name: string
+    logo: { svg: string; fileName: string }
+    /** The palette. The first colour is the primary, the second the accent. */
+    colors: BrandColor[]
     type?: BrandType
-    motion?: BrandMotion
+    motion: BrandMotion
+    material: LogoMaterial
     /** Saved so a refresh doesn't re-run (and re-word) the AI analysis. */
     insight?: LogoInsight
 }
 
-const STORAGE_KEY = 'onyourmark:brand:v1'
+export const MAX_COLORS = 6
 
-/** Reads the saved brand, or null when there is none or storage is blocked. */
-export function loadBrand(): Brand | null {
-    try {
-        const raw = localStorage.getItem(STORAGE_KEY)
-        if (!raw) return null
-        const parsed = JSON.parse(raw)
-        if (!parsed || typeof parsed !== 'object' || !parsed.colors) return null
-        return parsed as Brand
-    } catch {
-        return null
+export const uid = () => Math.random().toString(36).slice(2, 10)
+
+const DEFAULT_COLORS = ['#0066FF', '#FF4800']
+const COLOR_NAMES = ['Primary', 'Accent', 'Support', 'Highlight', 'Tone', 'Tint']
+
+export const colorName = (index: number) => COLOR_NAMES[index] ?? `Colour ${index + 1}`
+
+/** "acme-logo_final.svg" → "Acme" */
+export function nameFromFile(fileName: string) {
+    const words = fileName
+        .replace(/\.svg$/i, '')
+        .split(/[\s_\-.]+/)
+        .filter((w) => w && !/^(logo|logotype|wordmark|final|v\d+|\d+|copy|export|mark|icon|svg|rgb|cmyk)$/i.test(w))
+    const name = words.map((w) => w[0].toUpperCase() + w.slice(1)).join(' ')
+    return name || 'Your Brand'
+}
+
+/** A fresh brand for an uploaded logo, coloured from the artwork itself
+ *  where it has colours to offer. */
+export function createBrand(svg: string, fileName: string, logoColors: string[]): Brand {
+    const hexes = logoColors.length >= 2
+        ? logoColors.slice(0, 3)
+        : logoColors.length === 1
+            ? [logoColors[0], companion(logoColors[0])]
+            : DEFAULT_COLORS
+    return {
+        name: nameFromFile(fileName),
+        logo: { svg, fileName },
+        colors: hexes.map((hex, i) => ({ id: uid(), name: colorName(i), hex })),
+        motion: { preset: 'flow', speed: 1 },
+        material: 'chrome',
     }
 }
 
-/** Best-effort save — a full quota or private window just means the brand
- *  won't survive a refresh, never that the app breaks. */
-export function saveBrand(brand: Brand) {
-    try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(brand))
-    } catch {
-        // ignore
-    }
+export const primaryOf = (brand: Brand) => brand.colors[0]?.hex ?? DEFAULT_COLORS[0]
+export const accentOf = (brand: Brand) => brand.colors[1]?.hex ?? brand.colors[0]?.hex ?? DEFAULT_COLORS[1]
+
+/** A page background: a palette colour id, or one of these. */
+export type Bg = string
+export const BG_PAPER = 'paper'
+export const BG_INK = 'ink'
+export const BG_MOTION = 'motion'
+
+/** The flat colour behind a page. Motion pages sit on ink. A reference to
+ *  a colour that has since been removed falls back to the primary. */
+export function resolveBg(brand: Brand, bg: Bg | undefined): string {
+    if (bg === BG_PAPER) return PAPER
+    if (bg === BG_INK || bg === BG_MOTION) return INK
+    return brand.colors.find((c) => c.id === bg)?.hex ?? primaryOf(brand)
 }
+
+/** Text/logo colour for a page background. */
+export const fgFor = (brand: Brand, bg: Bg | undefined) =>
+    bg === BG_MOTION ? PAPER : contrastOn(resolveBg(brand, bg))
 
 /** `font-variation-settings` for a spec's axes. Weight stays on
  *  `font-weight`, as in JustMyType. */
