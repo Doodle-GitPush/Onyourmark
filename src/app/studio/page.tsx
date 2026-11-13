@@ -345,7 +345,7 @@ export default function Home() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -8, scale: 0.98, transition: { duration: 0.15 } }}
               transition={SPRING}
-              className="fixed top-[4.5rem] left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 h-10 pl-4 pr-1.5 rounded-full bg-[#1A1A1D] text-[12px] text-zinc-200 ring-1 ring-white/10 shadow-[0_16px_48px_rgba(0,0,0,0.6)]"
+              className="fixed top-[4.5rem] left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 h-10 pl-4 pr-1.5 rounded-full bg-[#1A1A1D] text-[12px] text-zinc-200 ring-1 ring-white/10"
             >
               <span className="pr-2.5">{toast.message}</span>
               {toast.action && (
@@ -383,7 +383,7 @@ export default function Home() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 grid place-items-center bg-[#0A0A0A]/80 backdrop-blur-md"
+              className="fixed inset-0 z-50 grid place-items-center bg-[#0A0A0A]/95"
             >
               <div className="w-56 text-center">
                 <div className="text-[13px] text-zinc-200">Exporting your deck</div>

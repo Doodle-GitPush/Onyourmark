@@ -37,7 +37,7 @@ interface DeckEditorProps {
 /** Background choices for a page: the palette, white, black, and — where
  *  it makes sense — the brand's moving background. */
 function BgDots({ brand, page, onPick }: { brand: Brand; page: Page; onPick: (bg: Bg) => void }) {
-    const options: { id: Bg; label: string; style: React.CSSProperties; spin?: boolean }[] = [
+    const options: { id: Bg; label: string; style: React.CSSProperties; motion?: boolean }[] = [
         ...brand.colors.map((c) => ({ id: c.id, label: c.name, style: { background: c.hex } })),
         { id: BG_PAPER, label: 'White', style: { background: PAPER } },
         { id: BG_INK, label: 'Black', style: { background: INK } },
@@ -46,8 +46,8 @@ function BgDots({ brand, page, onPick }: { brand: Brand; page: Page; onPick: (bg
         options.push({
             id: BG_MOTION,
             label: 'Motion',
-            style: { background: `conic-gradient(${primaryOf(brand)}, ${accentOf(brand)}, ${INK}, ${primaryOf(brand)})` },
-            spin: true,
+            style: {},
+            motion: true,
         })
     }
     // A reference to a since-removed colour renders as the primary.
@@ -67,10 +67,17 @@ function BgDots({ brand, page, onPick }: { brand: Brand; page: Page; onPick: (bg
                         'size-4 rounded-full ring-1 ring-white/20 transition-transform duration-200 hover:scale-125 active:scale-95',
                         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60',
                         o.id === current && 'outline outline-[1.5px] outline-offset-2 outline-[#FF4800]',
-                        o.spin && 'animate-[spin_6s_linear_infinite]',
+                        o.motion && 'flex overflow-hidden animate-[spin_6s_linear_infinite]',
                     )}
                     style={o.style}
-                />
+                >
+                    {o.motion && (
+                        <>
+                            <span className="h-full w-1/2" style={{ background: primaryOf(brand) }} />
+                            <span className="h-full w-1/2" style={{ background: accentOf(brand) }} />
+                        </>
+                    )}
+                </button>
             ))}
         </div>
     )
@@ -172,8 +179,8 @@ function SlideBlock({ page, index, count, brand, deck, isActive, scrollRoot, onO
             <div
                 ref={ref}
                 className={cn(
-                    'rounded-xl overflow-hidden ring-1 transition-shadow duration-500',
-                    isActive ? 'ring-white/[0.14] shadow-[0_30px_80px_-20px_rgba(0,0,0,0.9)]' : 'ring-white/[0.06]',
+                    'rounded-xl overflow-hidden ring-1 transition-[--tw-ring-color] duration-500',
+                    isActive ? 'ring-white/25' : 'ring-white/[0.06]',
                 )}
             >
                 <Slide

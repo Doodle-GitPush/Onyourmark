@@ -7,7 +7,7 @@ import { ArrowRight, Download, Play } from 'lucide-react'
 import { BG_MOTION, accentOf, primaryOf } from '@/lib/brand'
 import { logoUrl } from '@/lib/svg'
 import { Slide } from '@/components/deck/Slide'
-import { motionGradient } from '@/components/deck/ShaderCanvas'
+import { MotionSwatch } from '@/components/deck/ShaderCanvas'
 import { EASE, SPRING } from '@/components/deck/ui'
 import { DECK_ORDER, demoBrand, demoPage } from './demo'
 import { useStudioLabel } from './Nav'
@@ -49,7 +49,7 @@ function StudioFrame({ live }: { live: boolean }) {
     }, [])
 
     return (
-        <div className="overflow-hidden rounded-2xl bg-[#0A0A0A] ring-1 ring-white/10 shadow-[0_60px_160px_-30px_rgba(255,72,0,0.25),0_40px_100px_-20px_rgba(0,0,0,0.9)]">
+        <div className="overflow-hidden rounded-2xl bg-[#0A0A0A] ring-1 ring-white/10">
             {/* Window bar */}
             <div className="flex h-11 items-center justify-between border-b border-white/[0.06] px-4">
                 <div className="flex items-center gap-3">
@@ -92,7 +92,7 @@ function StudioFrame({ live }: { live: boolean }) {
                             {[primaryOf(brand), accentOf(brand), '#FFFFFF', '#0A0A0A'].map((c) => (
                                 <span key={c} className="size-2.5 rounded-full ring-1 ring-white/20" style={{ background: c }} />
                             ))}
-                            <span className="size-2.5 rounded-full outline outline-1 outline-offset-1 outline-[#FF4800]" style={{ background: motionGradient(primaryOf(brand), accentOf(brand)) }} />
+                            <MotionSwatch a={primaryOf(brand)} b={accentOf(brand)} className="size-2.5 outline outline-1 outline-offset-1 outline-[#FF4800]" />
                         </span>
                     </div>
                     <div className="overflow-hidden rounded-lg ring-1 ring-white/10">
@@ -101,7 +101,7 @@ function StudioFrame({ live }: { live: boolean }) {
                 </div>
 
                 {/* Dock */}
-                <div className="absolute bottom-3 left-1/2 hidden -translate-x-1/2 items-center gap-3 rounded-full bg-[#141416]/90 px-3 py-1.5 text-[10px] text-zinc-400 ring-1 ring-white/[0.08] backdrop-blur-md sm:flex">
+                <div className="absolute bottom-3 left-1/2 hidden -translate-x-1/2 items-center gap-3 rounded-full bg-[#141416] px-3 py-1.5 text-[10px] text-zinc-400 ring-1 ring-white/[0.08] sm:flex">
                     <span className="flex items-center gap-1.5">
                         <span className="grid size-4 place-items-center rounded-full bg-white">
                             {/* eslint-disable-next-line @next/next/no-img-element -- inline SVG data URL */}
@@ -116,7 +116,7 @@ function StudioFrame({ live }: { live: boolean }) {
                         Colours
                     </span>
                     <span className="flex items-center gap-1.5"><span className="font-serif text-[11px] text-zinc-100">Aa</span>Type</span>
-                    <span className="flex items-center gap-1.5"><span className="size-3 rounded-full" style={{ background: motionGradient(primaryOf(brand), accentOf(brand)) }} />Motion</span>
+                    <span className="flex items-center gap-1.5"><MotionSwatch a={primaryOf(brand)} b={accentOf(brand)} className="size-3" />Motion</span>
                 </div>
             </div>
         </div>
@@ -135,9 +135,6 @@ export function Hero() {
 
     return (
         <section className="relative overflow-hidden px-4 pt-36 sm:pt-44">
-            {/* Ambient glow in the brand orange */}
-            <div aria-hidden className="pointer-events-none absolute left-1/2 top-0 h-[720px] w-[1100px] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(255,72,0,0.16),transparent)] blur-2xl" />
-
             <div className="relative mx-auto max-w-4xl text-center">
                 <motion.div
                     initial={{ opacity: 0, y: 10 }}
@@ -145,14 +142,14 @@ export function Hero() {
                     transition={{ duration: 0.7, ease: EASE }}
                     className="mx-auto inline-flex items-center gap-2 rounded-full bg-white/[0.04] px-3.5 py-1.5 text-[12px] text-zinc-400 ring-1 ring-white/[0.08]"
                 >
-                    <span className="size-1.5 rounded-full bg-[#FF4800] shadow-[0_0_10px_#FF4800]" />
+                    <span className="size-1.5 rounded-full bg-[#FF4800]" />
                     Brand decks from one SVG
                 </motion.div>
 
                 <h1 className="mt-7 text-[clamp(2.6rem,7.4vw,5.6rem)] font-medium leading-[0.98] tracking-[-0.045em] text-zinc-50">
                     <Words words={LINE_1} from={0} />
                     <br />
-                    <Words words={LINE_2} from={LINE_1.length} className="bg-gradient-to-b from-zinc-300 to-zinc-500 bg-clip-text text-transparent" />
+                    <Words words={LINE_2} from={LINE_1.length} className="text-zinc-500" />
                 </h1>
 
                 <motion.p
@@ -172,7 +169,7 @@ export function Hero() {
                 >
                     <Link
                         href="/studio"
-                        className="group flex h-12 items-center gap-2 rounded-full bg-zinc-100 pl-6 pr-5 text-[15px] font-medium text-zinc-900 shadow-[0_8px_30px_rgba(255,255,255,0.12)] transition-all duration-200 hover:bg-white hover:shadow-[0_8px_40px_rgba(255,255,255,0.2)] active:scale-95"
+                        className="group flex h-12 items-center gap-2 rounded-full bg-zinc-100 pl-6 pr-5 text-[15px] font-medium text-zinc-900 transition-all duration-200 hover:bg-white active:scale-95"
                     >
                         {studio === 'Open the studio' ? 'Start with your logo' : studio}
                         <ArrowRight size={16} className="transition-transform duration-300 group-hover:translate-x-1" />
@@ -201,8 +198,6 @@ export function Hero() {
                 >
                     <StudioFrame live={live} />
                 </motion.div>
-                {/* Fades the frame's lower edge into the page */}
-                <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#0A0A0A] to-transparent" />
             </div>
         </section>
     )

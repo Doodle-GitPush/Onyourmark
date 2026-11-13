@@ -361,8 +361,8 @@ function ThreeD({ brand, mode, active, index, onReady }: Ctx) {
                     />
                 </div>
             ) : (
-                // Off screen or a thumbnail: no WebGL, just a hint of the object.
-                <div className="absolute inset-0 grid place-items-center" style={{ background: `radial-gradient(60% 70% at 50% 45%, ${alpha(primaryOf(brand), 0.22)}, transparent 70%)` }}>
+                // Off screen or a thumbnail: no WebGL, just the mark.
+                <div className="absolute inset-0 grid place-items-center">
                     <Logo svg={brand.logo.svg} mono={primaryOf(brand)} style={{ ...fitLogo(svgAspect(brand.logo.svg), 22, SLIDE_H * 0.4), opacity: 0.9 }} />
                 </div>
             )}

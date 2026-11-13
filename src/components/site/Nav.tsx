@@ -53,7 +53,7 @@ export function Nav() {
             <nav
                 className={cn(
                     'flex h-12 w-full max-w-5xl items-center justify-between rounded-full pl-5 pr-1.5 transition-all duration-500',
-                    scrolled ? 'bg-[#141416]/80 ring-1 ring-white/[0.08] backdrop-blur-xl shadow-[0_12px_40px_rgba(0,0,0,0.45)]' : 'bg-transparent',
+                    scrolled ? 'bg-[#141416] ring-1 ring-white/[0.08]' : 'bg-transparent',
                 )}
             >
                 <Link href="/" className="group flex items-center gap-2.5 text-[14px] tracking-tight text-zinc-100">

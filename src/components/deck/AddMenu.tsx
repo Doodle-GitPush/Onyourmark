@@ -38,8 +38,8 @@ export function AddMenu({ onPick, onClose, className }: AddMenuProps) {
             exit={{ opacity: 0, scale: 0.96, y: -4, transition: { duration: 0.12 } }}
             transition={SPRING}
             className={cn(
-                'z-40 w-[340px] grid grid-cols-2 gap-0.5 p-1.5 rounded-2xl bg-[#141416]/95 backdrop-blur-xl',
-                'ring-1 ring-white/[0.08] shadow-[0_24px_64px_rgba(0,0,0,0.6)]',
+                'z-40 w-[340px] grid grid-cols-2 gap-0.5 p-1.5 rounded-2xl bg-[#141416]',
+                'ring-1 ring-white/[0.1]',
                 className,
             )}
         >

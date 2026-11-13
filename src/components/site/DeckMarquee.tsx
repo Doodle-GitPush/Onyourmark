@@ -27,7 +27,7 @@ export function DeckMarquee() {
     return (
         <section aria-label="Pages in every deck" className="relative py-24">
             <p className="mb-10 text-center text-[12px] uppercase tracking-[0.22em] text-zinc-600">Nine pages, built from a single file</p>
-            <div className="group/marquee flex flex-col gap-5 [mask-image:linear-gradient(to_right,transparent,black_12%,black_88%,transparent)]">
+            <div className="group/marquee flex flex-col gap-5">
                 {rows.map((row, r) => (
                     <div key={r} className="flex w-max gap-5 group-hover/marquee:[animation-play-state:paused]" style={{ animation: `marquee ${r ? 70 : 60}s linear infinite ${r ? 'reverse' : ''}` }}>
                         {/* Twice over, so the loop has no seam. */}

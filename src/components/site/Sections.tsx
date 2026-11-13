@@ -51,7 +51,7 @@ export function HowItWorks() {
                         whileInView={{ scaleX: 1 }}
                         viewport={{ once: true, amount: 0.5 }}
                         transition={{ duration: 1.4, ease: EASE, delay: 0.3 }}
-                        className="absolute left-[16%] right-[16%] top-[52px] hidden h-px origin-left bg-gradient-to-r from-[#FF4800]/60 via-white/15 to-white/5 md:block"
+                        className="absolute left-[16%] right-[16%] top-[52px] hidden h-px origin-left bg-white/15 md:block"
                     />
                     {HOW.map((s, i) => (
                         <motion.div key={s.title} {...reveal(i)} className="group relative rounded-2xl bg-white/[0.02] p-7 ring-1 ring-white/[0.06] transition-colors duration-300 hover:bg-white/[0.035]">
@@ -106,7 +106,7 @@ export function Audiences() {
                             key={a.who}
                             {...reveal(i)}
                             whileHover={{ y: -6 }}
-                            className="group flex flex-col rounded-2xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] p-7 ring-1 ring-white/[0.07] transition-shadow duration-500 hover:shadow-[0_30px_80px_-30px_rgba(255,72,0,0.35)] hover:ring-white/[0.12]"
+                            className="group flex flex-col rounded-2xl bg-white/[0.025] p-7 ring-1 ring-white/[0.07] transition-colors duration-300 hover:bg-white/[0.04] hover:ring-white/[0.14]"
                         >
                             <a.icon size={20} strokeWidth={1.6} className="text-zinc-500 transition-colors duration-300 group-hover:text-[#FF4800]" />
                             <div className="mt-8 text-[13px] text-zinc-500">{a.who}</div>
@@ -154,7 +154,9 @@ export function Ecosystem() {
                     </motion.a>
                     <motion.div {...reveal(1)} className="relative overflow-hidden rounded-2xl bg-white/[0.02] p-8 ring-1 ring-white/[0.07]">
                         <div className="flex items-start justify-between">
-                            <span className="size-11 rounded-full bg-[conic-gradient(#FF4800,#6D28D9,#0369A1,#FF4800)] blur-[1px]" />
+                            <span className="flex -space-x-3" aria-hidden>
+                                {['#FF4800', '#6D28D9', '#0369A1'].map((c) => <span key={c} className="size-8 rounded-full ring-2 ring-[#0D0D0E]" style={{ background: c }} />)}
+                            </span>
                             <span className="rounded-full bg-white/[0.05] px-2.5 py-1 text-[11px] text-zinc-400 ring-1 ring-white/10">Coming soon</span>
                         </div>
                         <h3 className="mt-8 text-[20px] tracking-tight text-zinc-50">SkidLab</h3>

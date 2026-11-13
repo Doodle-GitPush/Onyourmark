@@ -35,7 +35,7 @@ export function PageRail({ brand, pages, activeId, onSelect, onReorder, onAdd }:
 
     return (
         <nav aria-label="Pages" className="hidden lg:flex flex-col absolute left-0 top-0 bottom-0 w-36 z-20 pointer-events-none">
-            <div ref={listRef} className="hidden-scrollbar flex-1 min-h-0 overflow-y-auto pl-6 pr-3 pt-8 pb-40 pointer-events-auto [mask-image:linear-gradient(to_bottom,transparent,black_2rem,black_calc(100%-8rem),transparent)]">
+            <div ref={listRef} className="hidden-scrollbar flex-1 min-h-0 overflow-y-auto pl-6 pr-3 pt-8 pb-40 pointer-events-auto">
                 <Reorder.Group axis="y" values={pages.map((p) => p.id)} onReorder={onReorder} layoutScroll className="flex flex-col gap-2.5">
                     {pages.map((page, i) => {
                         const active = page.id === activeId

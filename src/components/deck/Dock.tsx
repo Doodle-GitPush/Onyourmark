@@ -13,7 +13,7 @@ import { logoUrl } from '@/lib/svg'
 import type { DeckActions } from '@/lib/useDeck'
 import { cn } from '@/lib/utils'
 import type { Panel } from './DeckEditor'
-import { ShaderCanvas, motionGradient } from './ShaderCanvas'
+import { MotionSwatch, ShaderCanvas } from './ShaderCanvas'
 import { EASE, IconButton, SPRING, useDismiss } from './ui'
 
 interface DockProps {
@@ -357,7 +357,7 @@ export function Dock({ brand, deck, panel, onPanel, onLogoFile, onAddMotionPage 
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 8, scale: 0.98, transition: { duration: 0.12 } }}
                         transition={SPRING}
-                        className="hidden-scrollbar pointer-events-auto origin-bottom w-[340px] max-w-[calc(100vw-2rem)] max-h-[min(560px,calc(100vh-11rem))] overflow-y-auto rounded-2xl bg-[#141416]/95 backdrop-blur-xl p-5 ring-1 ring-white/[0.08] shadow-[0_24px_64px_rgba(0,0,0,0.6)]"
+                        className="hidden-scrollbar pointer-events-auto origin-bottom w-[340px] max-w-[calc(100vw-2rem)] max-h-[min(560px,calc(100vh-11rem))] overflow-y-auto rounded-2xl bg-[#141416] p-5 ring-1 ring-white/[0.1]"
                     >
                         {panel === 'logo' && <LogoPanel brand={brand} deck={deck} onLogoFile={onLogoFile} />}
                         {panel === 'colors' && <ColorsPanel brand={brand} deck={deck} />}
@@ -371,7 +371,7 @@ export function Dock({ brand, deck, panel, onPanel, onLogoFile, onAddMotionPage 
                 initial={{ opacity: 0, y: 24 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ ...SPRING, delay: 0.25 }}
-                className="pointer-events-auto flex items-center gap-0.5 p-1 rounded-full bg-[#141416]/90 backdrop-blur-xl ring-1 ring-white/[0.08] shadow-[0_16px_48px_rgba(0,0,0,0.55)]"
+                className="pointer-events-auto flex items-center gap-0.5 p-1 rounded-full bg-[#141416] ring-1 ring-white/[0.1]"
             >
                 <DockButton label="Logo" active={panel === 'logo'} onClick={() => toggle('logo')}>
                     <span className="grid place-items-center size-6 rounded-full bg-white overflow-hidden">
@@ -390,7 +390,7 @@ export function Dock({ brand, deck, panel, onPanel, onLogoFile, onAddMotionPage 
                     <span className="text-[15px] leading-none text-zinc-100" style={heading ? { fontFamily: `"${heading.family}", serif`, fontWeight: heading.weight } : { fontWeight: 600 }}>Aa</span>
                 </DockButton>
                 <DockButton label="Motion" active={panel === 'motion'} onClick={() => toggle('motion')}>
-                    <span className="size-[18px] rounded-full ring-1 ring-white/15" style={{ background: motionGradient(primaryOf(brand), accentOf(brand)) }} />
+                    <MotionSwatch a={primaryOf(brand)} b={accentOf(brand)} className="size-[18px] ring-1 ring-white/15" />
                 </DockButton>
             </motion.div>
         </div>

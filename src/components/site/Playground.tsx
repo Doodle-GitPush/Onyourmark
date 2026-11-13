@@ -7,7 +7,7 @@ import { PAIRINGS } from '@/lib/fonts'
 import { MOTION_LABELS } from '@/lib/shaders'
 import { cn } from '@/lib/utils'
 import { Slide } from '@/components/deck/Slide'
-import { motionGradient } from '@/components/deck/ShaderCanvas'
+import { MotionSwatch } from '@/components/deck/ShaderCanvas'
 import { EASE, SPRING } from '@/components/deck/ui'
 import { PALETTES, demoBrand, demoPage } from './demo'
 
@@ -109,7 +109,7 @@ export function Playground() {
                         <Group label="Motion">
                             {MOTION_PRESETS.slice(0, 4).map((m) => (
                                 <Chip key={m} group="motion" selected={motionPreset === m} onClick={() => { setMotionPreset(m); setBg(BG_MOTION) }}>
-                                    <span className="size-3 rounded-full" style={{ background: motionGradient(PALETTES[palette].colors[0], PALETTES[palette].colors[1]) }} />
+                                    <MotionSwatch a={PALETTES[palette].colors[0]} b={PALETTES[palette].colors[1]} className="size-3" />
                                     {MOTION_LABELS[m]}
                                 </Chip>
                             ))}

@@ -36,7 +36,6 @@ export function FinalCta() {
 
     return (
         <section className="relative overflow-hidden px-6 py-32 sm:py-40">
-            <div aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 h-[600px] w-[900px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(255,72,0,0.14),transparent)] blur-2xl" />
             <div className="relative mx-auto max-w-2xl text-center">
                 <motion.h2
                     initial={{ opacity: 0, y: 24 }}

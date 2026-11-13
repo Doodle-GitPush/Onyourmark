@@ -98,7 +98,7 @@ export function Present({ brand, pages, startIndex, onClose }: PresentProps) {
                 )}
             </div>
 
-            <div className="absolute top-4 right-4 flex items-center gap-1 rounded-full bg-black/50 backdrop-blur-md p-1 opacity-0 group-hover/present:opacity-100 focus-within:opacity-100 transition-opacity duration-300">
+            <div className="absolute top-4 right-4 flex items-center gap-1 rounded-full bg-[#141416] ring-1 ring-white/10 p-1 opacity-0 group-hover/present:opacity-100 focus-within:opacity-100 transition-opacity duration-300">
                 <IconButton label="Previous slide" disabled={index === 0} onClick={() => go(-1)} className="rounded-full text-zinc-300"><ChevronLeft size={16} /></IconButton>
                 <span className="px-1 text-[11px] tabular-nums text-zinc-400">{index + 1} / {pages.length}</span>
                 <IconButton label="Next slide" disabled={index === pages.length - 1} onClick={() => go(1)} className="rounded-full text-zinc-300"><ChevronRight size={16} /></IconButton>

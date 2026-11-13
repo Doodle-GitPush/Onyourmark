@@ -26,6 +26,17 @@ export const motionBase = (a: string) => mix(INK, a, 0.1)
 export const motionGradient = (a: string, b: string) =>
     `radial-gradient(60% 80% at 28% 38%, ${a} 0%, transparent 70%), radial-gradient(55% 75% at 76% 68%, ${b} 0%, transparent 70%), ${motionBase(a)}`
 
+/** "Motion" as a small flat swatch for the chrome: the two colours it
+ *  moves between, side by side as solid halves. */
+export function MotionSwatch({ a, b, className, style }: { a: string; b: string; className?: string; style?: React.CSSProperties }) {
+    return (
+        <span className={`inline-flex shrink-0 overflow-hidden rounded-full ${className ?? ''}`} style={style}>
+            <span className="h-full w-1/2" style={{ background: a }} />
+            <span className="h-full w-1/2" style={{ background: b }} />
+        </span>
+    )
+}
+
 function compile(gl: WebGLRenderingContext, type: number, source: string) {
     const shader = gl.createShader(type)!
     gl.shaderSource(shader, source)

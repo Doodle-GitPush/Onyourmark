@@ -7,7 +7,7 @@ import { BG_INK, BG_MOTION, BG_PAPER, MOTION_PRESETS, accentOf, primaryOf } from
 import { MOTION_LABELS } from '@/lib/shaders'
 import { cn } from '@/lib/utils'
 import { Slide } from '@/components/deck/Slide'
-import { motionGradient } from '@/components/deck/ShaderCanvas'
+import { MotionSwatch } from '@/components/deck/ShaderCanvas'
 import { EASE } from '@/components/deck/ui'
 import { DECK_ORDER, PALETTES, demoBrand, demoPage, useCycle, useMedia } from './demo'
 
@@ -142,13 +142,13 @@ function SystemVisual({ live }: { live: boolean }) {
             <div className="overflow-hidden rounded-lg ring-1 ring-white/10">
                 <Slide page={pages.palette} brand={brand} index={4} mode="display" active={live} entered />
             </div>
-            <div className="absolute -bottom-2 -left-4 w-[46%] overflow-hidden rounded-lg ring-1 ring-white/15 shadow-[0_20px_60px_rgba(0,0,0,0.7)]">
+            <div className="absolute -bottom-2 -left-4 w-[46%] overflow-hidden rounded-lg ring-4 ring-[#0A0A0A]">
                 <Slide page={pages.cover} brand={brand} index={0} mode="display" active={live} entered />
             </div>
-            <div className="absolute -bottom-6 -right-3 w-[46%] overflow-hidden rounded-lg ring-1 ring-white/15 shadow-[0_20px_60px_rgba(0,0,0,0.7)]">
+            <div className="absolute -bottom-6 -right-3 w-[46%] overflow-hidden rounded-lg ring-4 ring-[#0A0A0A]">
                 <Slide page={pages.type} brand={brand} index={5} mode="display" active={live} entered />
             </div>
-            <div className="absolute -top-4 right-3 flex items-center gap-2 rounded-full bg-[#141416]/90 px-3 py-1.5 text-[11px] text-zinc-300 ring-1 ring-white/10 backdrop-blur">
+            <div className="absolute -top-4 right-3 flex items-center gap-2 rounded-full bg-[#141416] px-3 py-1.5 text-[11px] text-zinc-300 ring-1 ring-white/10">
                 <span className="flex -space-x-1">{PALETTES[i].colors.map((c) => <span key={c} className="size-3 rounded-full ring-1 ring-[#141416] transition-colors duration-500" style={{ background: c }} />)}</span>
                 {PALETTES[i].name} · {brand.type?.heading.family}
             </div>
@@ -169,7 +169,7 @@ function MotionVisual({ live }: { live: boolean }) {
             <div className="mt-4 flex flex-wrap gap-2">
                 {MOTION_PRESETS.map((p) => (
                     <span key={p} className={cn('flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] ring-1 transition-all duration-500', p === preset ? 'text-zinc-100 ring-[#FF4800]/70 bg-white/[0.05]' : 'text-zinc-600 ring-white/[0.08]')}>
-                        <span className="size-2.5 rounded-full" style={{ background: motionGradient(primaryOf(brand), accentOf(brand)) }} />
+                        <MotionSwatch a={primaryOf(brand)} b={accentOf(brand)} className="size-2.5" />
                         {MOTION_LABELS[p]}
                     </span>
                 ))}
@@ -210,7 +210,7 @@ function ShareVisual({ live }: { live: boolean }) {
                 initial={{ opacity: 0, y: 16 }}
                 animate={live ? { opacity: 1, y: 0 } : undefined}
                 transition={{ delay: 0.5, duration: 0.6, ease: EASE }}
-                className="absolute -bottom-7 -right-3 flex items-center gap-3 rounded-xl bg-[#141416] py-2.5 pl-3 pr-4 ring-1 ring-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.6)]"
+                className="absolute -bottom-7 -right-3 flex items-center gap-3 rounded-xl bg-[#141416] py-2.5 pl-3 pr-4 ring-1 ring-white/10"
             >
                 <span className="grid size-9 place-items-center rounded-lg bg-[#FF4800]/15 text-[#FF4800]"><FileDown size={17} /></span>
                 <span>
@@ -311,9 +311,9 @@ function DesktopStory() {
                         <AnimatePresence mode="wait">
                             <motion.div
                                 key={step.id}
-                                initial={{ opacity: 0, y: 24, scale: 0.97, filter: 'blur(6px)' }}
-                                animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
-                                exit={{ opacity: 0, y: -16, scale: 0.98, filter: 'blur(6px)', transition: { duration: 0.25 } }}
+                                initial={{ opacity: 0, y: 24, scale: 0.97 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: -16, scale: 0.98, transition: { duration: 0.25 } }}
                                 transition={{ duration: 0.6, ease: EASE }}
                             >
                                 <Visual live={stageInView} />
